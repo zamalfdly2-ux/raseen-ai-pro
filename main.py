@@ -89,7 +89,7 @@ st.markdown("---")
 st.header("إدارة الحسابات وربط MetaTrader 5")
 account_type = st.radio("نوع الحساب", ["حساب تجريبي (Demo)", "حساب حقيقي (Live)"])
 
-# الإضافة الجديدة المطلوبة لربط بيانات الحساب والسيرفر بدقة مثل MT5
+# ربط بيانات الحساب والسيرفر بدقة مثل MT5
 mt5_account_id = st.text_input("رقم حساب MT5 (Account ID)", value="10012350082")
 mt5_server_name = st.text_input("اسم السيرفر (Server Name)", value="MetaQuotes-Demo")
 
@@ -148,11 +148,32 @@ timeframe_option = st.selectbox(
 
 st.markdown("---")
 
-# --- 4. تحليل الذكاء الاصطناعي وتنفيذ أوامر البوت والإشعارات الفورية ---
+# --- 4. تحليل الذكاء الاصطناعي وتنفيذ أوامر البوت والإشعارات الفورية (مع أزرار التشغيل والإيقاف) ---
 st.header("التحكم الآلي والتنفيذ")
 
-if st.button("بدء تحليل الذكاء الاصطناعي وتنفيذ أوامر البوت"):
-    st.warning("🔄 جاري تحليل السوق بالمؤشرات والاستراتيجيات (Price Action / Smart Money)...")
+# إنشاء زرين جنباً إلى جنب: زر للتشغيل وزر للإيقاف التام
+col_btn1, col_btn2 = st.columns(2)
+
+with col_btn1:
+    start_bot = st.button("▶ بدء تحليل الذكاء الاصطناعي وتنفيذ أوامر البوت")
+
+with col_btn2:
+    # تخصيص لون أحمر لزر الإيقاف ليكون واضحاً للمستخدم
+    stop_bot = st.button("⏹ إيقاف البوت والتحليل فوراً")
+
+# إدارة حالة البوت بناءً على الأزرار
+if "bot_active" not in st.session_state:
+    st.session_state.bot_active = False
+
+if start_bot:
+    st.session_state.bot_active = True
+
+if stop_bot:
+    st.session_state.bot_active = False
+    st.error("🛑 تم إيقاف البوت وعمليات التحليل الآلي بنجاح!")
+
+if st.session_state.bot_active:
+    st.warning("🔄 جاري تحليل السوق بالمؤشرات والاستراتيجيات (Price Action / Smart Money)... والبوت يعمل الآن.")
     
     # تحديد الأهداف بدقة عالية ومحاكاة السعر الحالي
     current_market_price = 4638.77
@@ -162,7 +183,7 @@ if st.button("بدء تحليل الذكاء الاصطناعي وتنفيذ أ�
     st.success(f"✅ تم ربط الحساب ({mt5_account_id} - {mt5_server_name}) بنجاح وتحليل السوق بدقة عالية!")
     st.success(f"🎯 **الأهداف المحددة آلياً:** سعر الدخول: `{current_market_price}` | هدف الأرباح (TP): `{take_profit_target}` | وقف الخسارة (SL): `{stop_loss_target}`")
     
-    # صياغة رسالة التنبيه الموحدة التي تصل عبر بوت تيليجرام (لك ولكل المستثمرين والشركات)
+    # صياغة رسالة التنبيه الموحدة التي تصل عبر بوت تيليجرام
     alert_message = (
         f"🚨 *Raseen AI Pro - تنبيه تداول فوري وتحديد الأهداف*\n"
         f"👤 المستثمر/الشركة: {user_name}\n"
@@ -173,18 +194,21 @@ if st.button("بدء تحليل الذكاء الاصطناعي وتنفيذ أ�
         f"🎯 المبلغ المستهدف العام: {target_amount}\n"
         f"📈 السعر الحالي: `{current_market_price}` | هدف الأرباح (TP): `{take_profit_target}`\n"
         f"⏳ الفترة المحددة: {timeframe_option}\n"
-        f"📈 *حالة البوت:* تحليل الذكاء الاصطناعي نشط. ينتظر وصول الصفقات للهدف المحدد، ويقوم بالإغلاق التلقائي للأرباح وإرسال إشعار فوري عند اكتمال الهدف!"
+        f"📈 *حالة البوت:* تحليل الذكاء الاصطناعي نشط."
     )
     
-    # إرسال التنبيه للمستثمر أو الشركة عبر تيليجرام
-    if user_telegram_id:
+    # إرسال التنبيه عبر تيليجرام (مرة واحدة عند التفعيل)
+    if user_telegram_id and "alert_sent" not in st.session_state:
         send_telegram_notification(user_telegram_id.strip(), alert_message)
-    
-    # إرسال نسخة إليك أنت كصانع ومبرمج للتطبيق
-    if user_telegram_id.strip() != CREATOR_CHAT_ID:
-        send_telegram_notification(CREATOR_CHAT_ID, f"📈 [متابعة عمليات العملاء والشركات]\n" + alert_message)
-    
-    st.info("📩 تم تفعيل نظام التنبيهات الفورية وإرسال تفاصيل الصفقة إلى بوت تيليجرام بنجاح!")
+        if user_telegram_id.strip() != CREATOR_CHAT_ID:
+            send_telegram_notification(CREATOR_CHAT_ID, f"📈 [متابعة عمليات العملاء والشركات]\n" + alert_message)
+        st.session_state.alert_sent = True
+
+    st.info("📩 نظام التنبيهات الفورية وبوت الذكاء الاصطناعي يعملان الآن في الخلفية. يمكنك النقر على زر 'إيقاف البوت' في أي وقت لتوقيفه.")
+else:
+    # إعادة تعيين حالة إرسال التنبيه لو تم إيقاف البوت وإعادة تشغيله لاحقاً
+    if "alert_sent" in st.session_state:
+        del st.session_state.alert_sent
 
 st.markdown("---")
 
