@@ -1,276 +1,151 @@
-import streamlit as st
-import datetime  
-import requests
+==========================================
+‏# Raseen AI Pro - Complete Execution & Risk Bot
+# ==========================================
 
-# محاولة استيراد مكتبة MetaTrader5 للتنفيذ الفعلي على المنصة
-try:
-    import MetaTrader5 as mt5
-    MT5_AVAILABLE = True
-except ImportError:
-    MT5_AVAILABLE = False
+‏import time
+‏import requests
+‏import numpy as np
 
-# إعدادات صفحة التطبيق
-st.set_page_config(page_title="Raseen AI Pro", page_icon="📈", layout="centered")
+‏try:
+‏    import MetaTrader5 as mt5
+‏    MT5_AVAILABLE = True
+‏except ImportError:
+‏    MT5_AVAILABLE = False
 
-# توكن بوت التيليجرام الخاص بك ومعرفك الشخصي المعتمد
-TELEGRAM_BOT_TOKEN = "8858466092:AAF2_YCAukhlvrKgVbBD0levV0i6Gbuag90"
-CREATOR_CHAT_ID = "1370315348"
-
-def send_telegram_notification(chat_id, message):
-    """
-    دالة إرسال رسائل التنبيه الفورية عبر بوت تيليجرام لكل من المستثمرين، الشركات، وأنت كصانع
-    """
-    if not chat_id:
-        return False
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "Markdown"
+# --- 1. إعدادات حسابات التداول (تجريبي وحقيقي) ---
+‏ACCOUNTS = {
+‏    "Demo": {
+‏        "server": "MetaQuotes-Demo",
+‏        "login": 10012369762,
+‏        "password": "JxOnC@7p",
+‏        "active": True
+    },
+‏    "Real": {
+‏        "server": "YOUR_REAL_SERVER",
+‏        "login": 00000000,
+‏        "password": "YOUR_REAL_PASSWORD",
+‏        "active": False
     }
-    try:
-        response = requests.post(url, json=payload)
-        return response.status_code == 200
-    except Exception as e:
-        return False
-
-# تصميم واجهة التطبيق وخلفية الشعار الجديد مع الهوية الخضراء الاستثمارية
-st.markdown("""
-    <style>
-    .main {
-        background-color: #0e2f1a;
-        background-image: linear-gradient(rgba(14, 47, 26, 0.92), rgba(14, 47, 26, 0.92)), url('https://i.ibb.co/6R0n5W8/image-20.png');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        color: white;
-    }
-    .stButton>button {
-        background-color: #2e7d32;
-        color: white;
-        font-weight: bold;
-        border-radius: 8px;
-        width: 100%;
-    }
-    h1, h2, h3 {
-        color: #a5d6a7;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# العنوان الرئيسي للتطبيق
-st.title("Raseen AI Pro")
-st.write("نظام التداول الذكي المتطور والمربوط بمنصة MetaTrader 5 والذكاء الاصطناعي")
-
-# قائمة لغات وقارات العالم (باستبعاد تام لإسرائيل لغةً وبلداً)
-countries_languages = {
-    "المملكة العربية السعودية (العربية)": "ar",
-    "United States (English)": "en",
-    "France (Français)": "fr",
-    "Türkiye (Türkçe)": "tr",
-    "Japan (日本語)": "ja",
-    "Germany (Deutsch)": "de",
-    "Brazil (Português)": "pt",
-    "China (中文)": "zh"
 }
 
-# --- 1. واجهة التسجيل ---
-st.header("تسجيل الدخول / إنشاء الحساب")
+# --- 2. الأصول المستهدفة مع إعدادات إدارة المخاطر (صفقات متسلسلة وأرباح زرقاء) ---
+‏TARGET_ASSETS = {
+‏    "Gold": {
+‏        "symbol": "XAUUSD", 
+‏        "lots": [0.01, 0.02, 0.03, 0.05], 
+‏        "sl_pips": 300, 
+‏        "tp_pips": 600
+    }
+}
 
-selected_cl = st.selectbox("اختر البلد واللغة / Country & Language", list(countries_languages.keys()))
-user_name = st.text_input("الاسم الكامل / Full Name")
-user_age = st.number_input("العمر / Age", min_value=18, max_value=100, value=25)
-user_email = st.text_input("البريد الإلكتروني / Email")
-user_password = st.text_input("كلمة المرور / Password", type="password")
-user_telegram_id = st.text_input("معرف تيليجرام الخاص بك (Telegram Chat ID) لتلقي التنبيهات الفورية", value=CREATOR_CHAT_ID)
+# --- 3. إعدادات تيليجرام للإشعارات الفورية ---
+‏TELEGRAM_CONFIG = {
+‏    "bot_token": "YOUR_BOT_TOKEN_HERE",
+‏    "chat_id": "YOUR_CHAT_ID_HERE",
+‏    "enabled": False  # ضعها True عند إضافة التوكن الخاص بك
+}
 
-if st.button("حفظ بيانات التسجيل"):
-    if user_name.strip() != "":
-        st.success(f"مرحباً بك، {user_name}! تم حفظ بياناتك بنجاح.")
-    else:
-        st.error("الرجاء إدخال الاسم بشكل صحيح.")
+‏def send_telegram_alert(message):
+    """إرسال إشعار تفصيلي بوقت التنفيذ وتأكيد وصول الصفقة للتيليجرام"""
+‏    if not TELEGRAM_CONFIG["enabled"]:
+‏        return
+‏    url = f"https://api.telegram.org/bot{TELEGRAM_CONFIG['bot_token']}/sendMessage"
+‏    payload = {
+‏        "chat_id": TELEGRAM_CONFIG["chat_id"],
+‏        "text": message,
+‏        "parse_mode": "Markdown"
+    }
+‏    try:
+‏        requests.post(url, json=payload, timeout=5)
+‏    except Exception as e:
+‏        print(f"Telegram Error: {e}")
 
-st.markdown("---")
-
-# --- 2. إدارة الحسابات (MT5) والتجربة المجانية ---
-st.header("إدارة الحسابات وربط MetaTrader 5")
-account_type = st.radio("نوع الحساب", ["حساب تجريبي (Demo)", "حساب حقيقي (Live)"])
-
-# ربط بيانات الحساب والسيرفر بدقة مثل MT5
-mt5_account_id = st.text_input("رقم حساب MT5 (Account ID)", value="10012350082")
-mt5_server_name = st.text_input("اسم السيرفر (Server Name)", value="MetaQuotes-Demo")
-mt5_password = st.text_input("كلمة مرور حساب MT5 (للتنفيذ الفعلي)", type="password", value="")
-
-if "حقيقي" in account_type:
-    st.info("💡 ملاحظة للمستثمرين والشركات: يحصل الحساب الحقيقي على فترة تجربة مجانية لمدة 30 يوماً للبوت. **لا يتم أبداً خصم أي رسوم أو أموال من رصيد التداول الخاص بك في MT5.**")
-
-# خانة الإيداع وحساب اللوت التلقائي بواسطة الذكاء الاصطناعي
-deposit_amount = st.number_input("أدخل مبلغ الإيداع الفعلي في تطبيق MetaTrader 5 ($)", min_value=10.0, max_value=10000000.0, value=100.0)
-
-def calculate_ai_lot_and_trades(deposit):
-    """
-    الذكاء الاصطناعي يحلل مبلغ الإيداع ويحدد تلقائياً عدد الصفقات وحجم اللوت بدقة
-    """
-    if deposit <= 50:
-        return 0.01, 1
-    elif deposit <= 500:
-        return 0.02, 2
-    elif deposit <= 5000:
-        return 0.05, 3
-    elif deposit <= 50000:
-        return 0.1, 5
-    else:
-        return 0.2, 8
-
-calculated_lot, calculated_trades = calculate_ai_lot_and_trades(deposit_amount)
-
-st.write(f"📊 **التحليل التلقائي للذكاء الاصطناعي - حجم اللوت:** {calculated_lot}")
-st.write(f"🔢 **عدد الصفقات المتزامنة:** {calculated_trades}")
-
-st.markdown("---")
-
-# --- 3. إعدادات المبلغ المحدد والفترة المحددة ---
-st.header("إعدادات الهدف والمهلة الزمنية للبوت")
-
-target_amount = st.selectbox(
-    "المبلغ المحدد المستهدف ($)",
-    [
-        "من 10 دولار إلى 50 دولار",
-        "من 50 دولار إلى 100 دولار",
-        "من 100 دولار إلى 500 دولار",
-        "من 500 دولار إلى 1000 دولار",
-        "من 1000 دولار إلى 5000 دولار",
-        "من 5000 دولار إلى 10000 دولار",
-        "من 10000 دولار إلى 50000 دولار",
-        "من 50000 دولار إلى 100000 دولار",
-        "من 100000 دولار إلى 1000000 دولار",
-        "من 1000000 دولار إلى 5000000 دولار",
-        "من 10 دولار الى 1,250,369,824,789,318 دولار"
-    ]
-)
-
-timeframe_option = st.selectbox(
-    "الفترة المحددة لجمع المبلغ",
-    ["من يوم إلى 7 أيام", "من شهر إلى 12 شهراً", "من سنة إلى 5 سنوات"]
-)
-
-st.markdown("---")
-
-# --- 4. تحليل الذكاء الاصطناعي لحالة السوق (طلوع/نزول قوي وعادي) والتنفيذ الفعلي المباشر في MT5 ---
-st.header("التحكم الآلي والتنفيذ الفعلي في MT5 (شراء / بيع حسب السوق)")
-
-col_btn1, col_btn2 = st.columns(2)
-
-with col_btn1:
-    start_bot = st.button("▶ بدء تحليل الذكاء الاصطناعي وتنفيذ الصفقات فعلياً")
-
-with col_btn2:
-    stop_bot = st.button("⏹ إيقاف البوت والتحليل فوراً")
-
-if "bot_active" not in st.session_state:
-    st.session_state.bot_active = False
-
-if start_bot:
-    st.session_state.bot_active = True
-
-if stop_bot:
-    st.session_state.bot_active = False
-    st.error("🛑 تم إيقاف البوت وعمليات التنفيذ الآلي بنجاح!")
-
-if st.session_state.bot_active:
-    st.spinner("🔄 جاري الاتصال المباشر بمنصة MetaTrader 5 وفحص حركة السوق (طلوع/نزول قوي وعادي)...")
+# --- 4. دالة التنفيذ المتسلسل مع مستويات الأمان (SL & TP) ---
+‏def execute_multi_orders_with_risk():
+‏    print("=" * 60)
+‏    print("🚀 بدء تشغيل روبوت التداول الذكي: Raseen AI Pro")
+‏    print("=" * 60)
     
-    # محاكاة الاتصال والتنفيذ الفعلي المباشر
-    execution_status_text = "تم الاتصال بنجاح وتنفيذ صفقات الشراء/البيع في MT5!"
-    market_condition = "طلوع قوي (Strong Bullish)"
-    trade_action = "شراء (BUY)"
-    current_market_price = 4638.77
-    take_profit_target = current_market_price + 18.50
-    stop_loss_target = current_market_price - 9.00
+‏    if not MT5_AVAILABLE:
+‏        print("⚠️ مكتبة MetaTrader5 غير مثبتة. يرجى تثبيتها عبر: pip install MetaTrader5")
+‏        return
 
-    # ربط فعلي عبر مكتبة MT5 إذا كانت مثبتة على السيرفر المحلي للمستخدم
-    if MT5_AVAILABLE:
-        if mt5.initialize():
-            # تسجيل الدخول للحساب المحدد
-            authorized = mt5.login(int(mt5_account_id) if mt5_account_id.isdigit() else mt5_account_id, password=mt5_password, server=mt5_server_name)
-            if authorized:
-                execution_status_text = "🚀 تم تسجيل الدخول وتنفيذ الأوامر الفعليّة داخل تطبيق MT5 بنجاح!"
-            else:
-                execution_status_text = "⚠️ تعذر تسجيل الدخول لـ MT5، يرجى التحقق من كلمة المرور ورقم الحساب."
-            mt5.shutdown()
-        else:
-            execution_status_text = "⚠️ تعذر تهيئة مكتبة MetaTrader 5 محلياً."
-
-    st.success(f"✅ {execution_status_text}")
-    st.success(f"📊 حالة السوق المكتشفة: **{market_condition}** 🚀")
-    st.success(f"🤖 **قرار الذكاء الاصطناعي:** تنفيذ صفقة **{trade_action}** | سعر الدخول: `{current_market_price}` | TP: `{take_profit_target}` | SL: `{stop_loss_target}`")
-    
-    # صياغة رسالة التنفيذ للإرسال عبر تيليجرام
-    execution_message = (
-        f"🤖 *Raseen AI Pro - تنفيذ صفقة حقيقية في MT5*\n"
-        f"👤 المستخدم/الشركة: {user_name}\n"
-        f"🔗 الحساب المرتبط: `{mt5_account_id}` ({account_type})\n"
-        f"🏢 السيرفر: `{mt5_server_name}`\n"
-        f"📊 حالة السوق الحالية: *{market_condition}*\n"
-        f"⚡ **قرار البوت:** تنفيذ صفقة `{trade_action}` على المنصة\n"
-        f"💰 الإيداع: ${deposit_amount} | حجم اللوت: {calculated_lot} (عدد الصفقات: {calculated_trades})\n"
-        f"🎯 سعر الدخول: `{current_market_price}` | TP: `{take_profit_target}` | SL: `{stop_loss_target}`\n"
-        f"⏳ المهلة الزمنية: {timeframe_option}\n"
-        f"🚀 *الحالة:* ظهرت الصفقات في قائمة التداول الآن!"
-    )
-    
-    if user_telegram_id and "execution_sent" not in st.session_state:
-        sent_ok = send_telegram_notification(user_telegram_id.strip(), execution_message)
-        if user_telegram_id.strip() != CREATOR_CHAT_ID:
-            send_telegram_notification(CREATOR_CHAT_ID, f"📈 [متابعة تنفيذ الصفقات الحية للعملاء]\n" + execution_message)
-        
-        if sent_ok:
-            st.success("📩 تم إرسال إشعار التنفيذ الفعلي عبر بوت تيليجرام بنجاح!")
-        else:
-            st.warning("⚠️ يرجى التأكد من معرف تيليجرام لاستلام التنبيهات.")
+‏    for acc_name, acc_info in ACCOUNTS.items():
+‏        if not acc_info["active"]:
+‏            continue
             
-        st.session_state.execution_sent = True
+‏        print(f"\n💼 الاتصال بالحساب ({acc_name}): {acc_info['login']}")
+‏        if not mt5.initialize(login=acc_info["login"], password=acc_info["password"], server=acc_info["server"]):
+‏            print(f"❌ فشل الاتصال: {mt5.last_error()}")
+‏            continue
+            
+‏        print("✅ تم الاتصال بنجاح بالمنصة، جاري تحليل السوق وتنفيذ الصفقات...")
+                
+‏        for asset_key, asset_val in TARGET_ASSETS.items():
+‏            symbol = asset_val["symbol"]
+‏            symbol_info = mt5.symbol_info(symbol)
+            
+‏            if symbol_info is None or not symbol_info.visible:
+‏                if not mt5.symbol_select(symbol, True):
+‏                    print(f"❌ فشل تفعيل الرمز {symbol}")
+‏                    continue
+                    
+‏            tick = mt5.symbol_info_tick(symbol)
+‏            if tick is None:
+‏                print("❌ فشل جلب أسعار السوق الحالية")
+‏                continue
+                
+‏            point = symbol_info.point
+            
+            # حلقة لتنفيذ صفقات متعددة ومتسلسلة (تظهر أرباحها باللون الأزرق على الآيفون)
+‏            for lot in asset_val["lots"]:
+‏                price = tick.ask
+‏                sl = price - (asset_val["sl_pips"] * point)
+‏                tp = price + (asset_val["tp_pips"] * point)
+                
+‏                request = {
+‏                    "action": mt5.TRADE_ACTION_DEAL,
+‏                    "symbol": symbol,
+‏                    "volume": lot,
+‏                    "type": mt5.ORDER_TYPE_BUY,
+‏                    "price": price,
+‏                    "sl": sl,
+‏                    "tp": tp,
+‏                    "deviation": 20,
+‏                    "magic": 202608,
+‏                    "comment": "Raseen AI Pro Grid",
+‏                    "type_time": mt5.ORDER_TIME_GTC,
+‏                    "type_filling": mt5.ORDER_FILLING_FOK,
+                }
+                
+‏                execution_start_time = time.time()
+‏                result = mt5.order_send(request)
+‏                execution_duration = round(time.time() - execution_start_time, 3)
+‏                timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+                
+‏                if result.retcode == mt5.TRADE_RETCODE_DONE:
+‏                    msg = (
+‏                        f"🤖 *Raseen AI Pro - تقرير التنفيذ الآلي*\n"
+‏                        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+‏                        f"🏢 الحساب: `{acc_name}` ({acc_info['login']})\n"
+‏                        f"📌 الأصل: `{symbol}`\n"
+‏                        f"⚡ الإجراء: *BUY (شراء)*\n"
+‏                        f"📦 اللوت: `{lot}`\n"
+‏                        f"🛑 وقف الخسارة (SL): `{sl}`\n"
+‏                        f"🎯 جني الأرباح (TP): `{tp}`\n"
+‏                        f"⏱️ وقت التنفيذ: `{timestamp_str}` (استغرق {execution_duration} ثانية)\n"
+‏                        f"💬 الحالة: *تم تنفيذ الصفقة بنجاح*"
+                    )
+‏                    print(msg)
+‏                    print("-" * 50)
+‏                    send_telegram_alert(msg)
+‏                else:
+‏                    print(f"⚠️ خطأ في تنفيذ اللوت {lot}. كود الخطأ: {result.retcode}")
+                
+‏                time.sleep(0.3)
+            
+‏        mt5.shutdown()
+‏        print("🔒 تم إغلاق جلسة الاتصال بلطف.")
 
-    st.info("💡 البوت يراقب السوق الآن وينفذ الصفقات مباشرة على حسابك. يمكنك النقر على زر 'إيقاف البوت' في أي وقت.")
-else:
-    if "execution_sent" in st.session_state:
-        del st.session_state.execution_sent
-
-st.markdown("---")
-
-# --- 5. باقات الاشتراكات للمستثمرين والشركات ---
-st.header("باقات الاشتراكات الاحترافية")
-st.write("تظهر أسعار الباقات للمستثمرين والشركات بعملاتهم المحلية، بينما يتم التداول داخل MetaTrader 5 بالدولار الأمريكي ($) دون المساس برصيد التداول أبداً:")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.subheader("الشهرية")
-    st.write("**50** (عملة محلية)")
-    st.text("تاريخ البدء والنهاية (30 يوم)")
-    st.button("اشتراك شهري")
-
-with col2:
-    st.subheader("السنوية")
-    st.write("**200** (عملة محلية)")
-    st.text("تاريخ البدء والنهاية (365 يوم)")
-    st.button("اشتراك سنوي")
-
-with col3:
-    st.subheader("مدى الحياة")
-    st.write("**1000** (عملة محلية)")
-    st.text("لا تنتهي أبداً (تاريخ بدء فقط)")
-    st.button("اشتراك مدى الحياة")
-
-st.markdown("---")
-
-# --- 6. تفاصيل التطبيق وروابط التحميل للمستثمرين والشركات ---
-st.header("تفاصيل التطبيق وروابط التحميل (App Details & Download)")
-st.write("""
-**مرحباً بك في منصة Raseen AI Pro العالمية:**
-* **نبذة عن المنصة:** تطبيق ذكاء اصطناعي متطور مخصص للربط المباشر مع منصة التداول العالمية **MetaTrader 5 (MT5)**، يعمل على تحليل السوق بدقة فائقة باستخدام استراتيجيات حركة السعر (Price Action) ومفاهيم الأموال الذكية (Smart Money).
-* **الأمان والموثوقية:** اشتراكات الباقات تتم عبر بوابات دفع خارجية مستقلة تماماً، ولا يتم خصم أي رسوم من أرصدة التداول الخاصة بالمستثمرين والشركات.
-* **الإدارة التلقائية:** البوت يراقب السوق، ينفذ الصفقات بناءً على قوة الاتجاه، وينتظر وصول الأهداف ليغلق الصفقات الرابحة ويوقف العمل تلقائياً فور تحقيق المستهدف مع إرسال إشعار فوري عبر التيليجرام.
-""")
-
-st.markdown("🔗 **[انقر هنا لتحميل تطبيق Raseen AI Pro (نسخة الشركات والمستثمرين)](https://replit.com)**")
+‏if __name__ == "__main__":
+‏    execute_multi_orders_with_risk()
