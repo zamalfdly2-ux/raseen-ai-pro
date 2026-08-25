@@ -1,38 +1,39 @@
 import time
 import requests
-import numpy as np
+import MetaTrader5 as mt5
 
-try:
-    import MetaTrader5 as mt5
-    MT5_AVAILABLE = True
-except ImportError:
-    MT5_AVAILABLE = False
-
+# --- إعدادات الحسابات (التجريبي والحقيقي) ---
 ACCOUNTS = {
-    "Demo": {
+    "demo": {
         "server": "MetaQuotes-Demo",
         "login": 10012369762,
-        "password": "JxOnC@7p",
-        "active": True
+        "password": "JxOnC@7p"
+    },
+    "real": {
+        "server": "YOUR_BROKER_REAL_SERVER",  # استبدله باسم سيرفر الشركة الحقيقي
+        "login": 123456789,                    # استبدله برقم حسابك الحقيقي
+        "password": "YOUR_REAL_PASSWORD"       # استبدله بكلمة مرور الحقيقي
     }
 }
 
-TARGET_ASSETS = {
-    "Gold": {
-        "symbol": "XAUUSD", 
-        "lots": [0.01, 0.02, 0.03, 0.05], 
-        "sl_pips": 300, 
-        "tp_pips": 600
-    }
-}
+# ⚡ اختر وضع التشغيل هنا: اكتب "demo" للتجريبي أو "real" للحقيقي
+MODE = "demo" 
 
+# --- إعدادات تيليجرام ---
 TELEGRAM_CONFIG = {
-    "bot_token": "YOUR_BOT_TOKEN_HERE",
-    "chat_id": "YOUR_CHAT_ID_HERE",
-    "enabled": False
+    "bot_token": "8858466092:AAF2_YCAukhlvrKgVbBD0levV0i6Gbuag90",
+    "chat_id": "1370315348",
+    "enabled": True
 }
+
+# --- إعدادات الاستراتيجية والأصول (الذهب) ---
+SYMBOL = "XAUUSD"
+LOT_SEQUENCE = [0.01, 0.02, 0.03, 0.05]  # الصفقات المتسلسلة
+SL_PIPS = 300  # وقف الخسارة
+TP_PIPS = 600  # جني الأرباح
 
 def send_telegram_alert(message):
+    """إرسال إشعار فوري إلى تيليجرام"""
     if not TELEGRAM_CONFIG["enabled"]:
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_CONFIG['bot_token']}/sendMessage"
@@ -46,76 +47,90 @@ def send_telegram_alert(message):
     except Exception as e:
         print(f"Telegram Error: {e}")
 
-def execute_multi_orders_with_risk():
-    print("=" * 60)
-    print("Raseen AI Pro - Bot Started")
-    print("=" * 60)
+def initialize_mt5():
+    acc = ACCOUNTS[MODE]
+    print(f"🔄 جاري الاتصال بمنصة MetaTrader 5 ({MODE.upper()} Account)...")
     
-    if not MT5_AVAILABLE:
-        print("MetaTrader5 library is not available.")
+    if not mt5.initialize(login=acc["login"], 
+                          password=acc["password"], 
+                          server=acc["server"]):
+        print(f"فشل الاتصال، الكود: {mt5.last_error()}")
+        return False
+        
+    print(f"✅ تم الاتصال بنجاح بـحساب الـ {MODE.upper()}.")
+    return True
+
+def analyze_and_execute():
+    symbol_info = mt5.symbol_info(SYMBOL)
+    if symbol_info is None:
+        print(f"⚠️ الأصل {SYMBOL} غير متوفر.")
         return
 
-    for acc_name, acc_info in ACCOUNTS.items():
-        if not acc_info["active"]:
-            continue
-            
-        print(f"Connecting to account: {acc_info['login']}")
-        if not mt5.initialize(login=acc_info["login"], password=acc_info["password"], server=acc_info["server"]):
-            print(f"Connection failed: {mt5.last_error()}")
-            continue
-            
-        print("Connected successfully. Analyzing and executing...")
-                
-        for asset_key, asset_val in TARGET_ASSETS.items():
-            symbol = asset_val["symbol"]
-            symbol_info = mt5.symbol_info(symbol)
-            
-            if symbol_info is None or not symbol_info.visible:
-                if not mt5.symbol_select(symbol, True):
-                    print(f"Failed to select symbol {symbol}")
-                    continue
-                    
-            tick = mt5.symbol_info_tick(symbol)
-            if tick is None:
-                print("Failed to get market tick data")
-                continue
-                
-            point = symbol_info.point
-            
-            for lot in asset_val["lots"]:
-                price = tick.ask
-                sl = price - (asset_val["sl_pips"] * point)
-                tp = price + (asset_val["tp_pips"] * point)
-                
-                request = {
-                    "action": mt5.TRADE_ACTION_DEAL,
-                    "symbol": symbol,
-                    "volume": lot,
-                    "type": mt5.ORDER_TYPE_BUY,
-                    "price": price,
-                    "sl": sl,
-                    "tp": tp,
-                    "deviation": 20,
-                    "magic": 202608,
-                    "comment": "Raseen AI Pro Grid",
-                    "type_time": mt5.ORDER_TIME_GTC,
-                    "type_filling": mt5.ORDER_FILLING_FOK,
-                }
-                
-                result = mt5.order_send(request)
-                timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
-                
-                if result.retcode == mt5.TRADE_RETCODE_DONE:
-                    msg = f"Raseen AI Pro Executed: {symbol} | Lot: {lot} | Price: {price} | Time: {timestamp_str}"
-                    print(msg)
-                    send_telegram_alert(msg)
-                else:
-                    print(f"Order failed for lot {lot}. Error code: {result.retcode}")
-                
-                time.sleep(0.3)
-            
-        mt5.shutdown()
-        print("Session closed.")
+    if not symbol_info.visible:
+        if not mt5.symbol_select(SYMBOL, True):
+            print(f"⚠️ تعذر تفعيل الأصل {SYMBOL}.")
+            return
+
+    tick = mt5.symbol_info_tick(SYMBOL)
+    if tick is None:
+        print("⚠️ تعذر جلب بيانات السعر الحالية.")
+        return
+
+    point = symbol_info.point
+    price = tick.bid
+    
+    print(f"📊 تحليل السوق لـ {SYMBOL} | السعر الحالي: {price} [حساب: {MODE.upper()}]")
+    print("🚀 جاري تنفيذ صفقات الحزمة المتسلسلة...")
+
+    for lot in LOT_SEQUENCE:
+        sl = price - (SL_PIPS * point)
+        tp = price + (TP_PIPS * point)
+
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": SYMBOL,
+            "volume": lot,
+            "type": mt5.ORDER_TYPE_BUY,
+            "price": tick.ask,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 20,
+            "magic": 20260825,
+            "comment": f"Raseen AI Pro ({MODE})",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
+        }
+
+        result = mt5.order_send(request)
+        timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        if result.retcode == mt5.TRADE_RETCODE_DONE:
+            msg = (
+                f"🤖 *Raseen AI Pro - تنبيه صفقة جديدة*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🏷️ النوع: `{MODE.upper()}`\n"
+                f"📌 الأصل: `{SYMBOL}`\n"
+                f"⚡ الإجراء: *BUY (شراء)*\n"
+                f"📦 حجم اللوت: `{lot}`\n"
+                f"💰 سعر الدخول: `{tick.ask}`\n"
+                f"⏱️ الوقت: `{timestamp_str}`\n"
+                f"💬 الحالة: *تم التنفيذ بنجاح*"
+            )
+            print(f"🔵 [تم التنفيذ] صفقة شراء | لوت: {lot} | بسعر: {tick.ask}")
+            send_telegram_alert(msg)
+        else:
+            print(f"❌ [فشل التنفيذ] للوت {lot}، الكود: {result.retcode}")
+        
+        time.sleep(0.5)
 
 if __name__ == "__main__":
-    execute_multi_orders_with_risk()
+    if initialize_mt5():
+        try:
+            while True:
+                print("\n--- 🔍 فحص إشارات السوق الجديدة ---")
+                analyze_and_execute()
+                print("⏳ الانتظار للفحص القادم (خلال 60 ثانية)...")
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("🛑 تم إيقاف البوت بواسطة المستخدم.")
+            mt5.shutdown()
