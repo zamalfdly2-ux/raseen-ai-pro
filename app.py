@@ -47,14 +47,20 @@ selected_country = st.sidebar.selectbox("اختر الدولة", countries_list)
 selected_lang = st.sidebar.selectbox("اختر اللغة", languages_list)
 
 st.sidebar.markdown("---")
-st.sidebar.header("🔐 بيانات الحساب (MT5)")
-account_mode = st.sidebar.selectbox("نوع الحساب", ["حساب تجريبي (Demo)", "حقيقي (Live)"])
-acc_number = st.sidebar.text_input("رقم الحساب", value="10012369762")
-acc_pass = st.sidebar.text_input("كلمة المرور", type="password")
+st.sidebar.header("🔐 بيانات الحساب والربط (MT5)")
 
-if st.sidebar.button("ربط الحساب"):
-    if acc_number:
-        st.sidebar.success(f"تم ربط الحساب ({acc_number}) بنجاح!")
+# إدخال معلومات الحساب بالكامل (نوع الحساب، رقم الحساب، اسم السيرفر، كلمة المرور)
+account_mode = st.sidebar.selectbox("نوع الحساب", ["حساب تجريبي (Demo)", "حقيقي (Live)"])
+acc_number = st.sidebar.text_input("رقم الحساب (Login)", value="10012369762")
+server_name = st.sidebar.text_input("اسم السيرفر (Server)", value="MetaQuotes-Demo")
+acc_pass = st.sidebar.text_input("كلمة المرور (Password)", type="password")
+
+if st.sidebar.button("ربط وحفظ بيانات الحساب"):
+    if acc_number and server_name and acc_pass:
+        st.sidebar.success(f"تم ربط الحساب ({acc_number}) على سيرفر ({server_name}) بنجاح!")
+        send_telegram_alert(f"🔗 *ربط حساب جديد*\nرقم الحساب: {acc_number}\nالسيرفر: {server_name}\nالنوع: {account_mode}")
+    else:
+        st.sidebar.error("يرجى إكمال جميع بيانات الحساب (رقم الحساب، السيرفر، وكلمة المرور)")
 
 # الأقسام الرئيسية
 tab1, tab2, tab3, tab4 = st.tabs(["⚡ صفقات وتنفيذ الذكاء الاصطناعي", "🤖 تشغيل البوت والتحكم", "📊 شارت وتحليل السوق", "💎 باقات الاشتراك"])
@@ -87,11 +93,11 @@ with tab1:
             chosen = random.choice(signals)
             
             st.success(f"🤖 **إشارة الذكاء الاصطناعي:** {chosen['signal']}")
-            st.info(f"⚙️ **البوت ينفذ الأمر:** تم تنفيذ أمر **{chosen['action']}** على الذهب (XAUUSD) بنجاح!")
+            st.info(f"⚙️ **البوت ينفذ الأمر:** تم تنفيذ أمر **{chosen['action']}** على الذهب (XAUUSD) بنجاح للحساب {acc_number}!")
             
             # إضافة الصفقة للجدول وتنبيه تيليجرام
             st.session_state.live_trades.insert(0, chosen)
-            send_telegram_alert(f"🤖 *تنبيه تنفيذ صفقة*\nالذكاء الاصطناعي رصد: {chosen['signal']}\nالبوت نفذ: *{chosen['action']}*\nالسعر: {chosen['price']}")
+            send_telegram_alert(f"🤖 *تنبيه تنفيذ صفقة*\nالحساب: {acc_number}\nالذكاء الاصطناعي رصد: {chosen['signal']}\nالبوت نفذ: *{chosen['action']}*\nالسعر: {chosen['price']}")
 
     st.markdown("### سجل الصفقات المنفذة تلقائياً:")
     if st.session_state.live_trades:
