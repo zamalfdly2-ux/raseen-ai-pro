@@ -18,41 +18,41 @@ except ImportError:
 # إعدادات الصفحة
 st.set_page_config(page_title="Raseen AI Pro - Smart Trading", page_icon="🤖", layout="wide")
 
-# تهيئة الجلسة
-if 'logged_in_user' not in st.session_state:
-    st.session_state.logged_in_user = None
+# تهيئة الجلسة والحفظ الثابت لمنع فقدان البيانات عند إعادة التحميل
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
 if 'user_role' not in st.session_state:
     st.session_state.user_role = None
-if 'client_data' not in st.session_state:
-    st.session_state.client_data = None
+if 'mt5_data' not in st.session_state:
+    st.session_state.mt5_data = {
+        "first_name": "عزام",
+        "second_name": "الهذلي",
+        "server": "MetaQuotes-Demo",
+        "acc_type": "Forex Hedged USD (1:100)",
+        "deposit": "3000 USD",
+        "login": "111726346",
+        "password": "A@3hHoNo",
+        "investor": "Ir_4UmSt",
+        "country": "المملكة العربية السعودية (السعودية)",
+        "currency": "ريال سعودي (SAR)",
+        "reg_date": datetime.now()
+    }
 if 'is_paid' not in st.session_state:
     st.session_state.is_paid = False
 if 'subscribers_db' not in st.session_state:
     st.session_state.subscribers_db = []
-if 'mt5_accounts' not in st.session_state:
-    st.session_state.mt5_accounts = []
 
 # القواميس واللغات العالمية
 translations = {
     "العربية": {
         "title": "🚀 Raseen AI Pro - محرك الذكاء الاصطناعي للتنفيذ الآلي",
-        "sidebar_title": "🔐 بوابة الحسابات واللغات",
-        "login_type": "اختر نوع الدخول:",
-        "investor_login": "دخول المستثمرين والشركات",
-        "admin_login": "دخول المبرمج (المدير)",
-        "name": "الاسم الكامل",
-        "country": "الدولة المشاركة في كأس العالم",
-        "currency": "العملة المفضلة",
-        "server": "الخادم (Server)",
-        "acc_type": "نوع الحساب",
-        "deposit": "الإيداع / الرصيد",
-        "login_num": "رقم الدخول (Login)",
-        "password": "كلمة المرور",
-        "save_btn": "حفظ الحساب والدخول للنظام",
+        "sidebar_title": "🔐 بوابة الحسابات ومنصة MT5",
+        "welcome": "أهلاً بك يا بطل:",
+        "logout": "تسجيل الخروج",
         "tab1": "⚡ التحليل الفني والدخول الآلي الفوري",
         "tab2": "💎 باقات الاشتراك و Apple Pay",
         "tab3": "👥 لوحة إدارة الحسابات والمشتركين",
-        "amount_range": "حدد نطاق المبلغ المخصص للتنفيذ الآلي:",
+        "amount_range": "حدد نطاق المبلغ المخصص للتنفيذ الآلي (من 10 دولار إلى 50,000,000,000 دولار):",
         "pairs": "اختر زوج العملات أو الأصل المالي",
         "timeframe": "اختر الفريم الزمني للاستراتيجية",
         "execute_btn": "🚀 تنفيذ الصفقة فوراً على حساب MT5",
@@ -62,23 +62,13 @@ translations = {
     },
     "English": {
         "title": "🚀 Raseen AI Pro - AI Automated Trading Engine",
-        "sidebar_title": "🔐 Account & Language Portal",
-        "login_type": "Select Login Type:",
-        "investor_login": "Investors & Companies Login",
-        "admin_login": "Developer (Admin) Login",
-        "name": "Full Name",
-        "country": "World Cup Country",
-        "currency": "Preferred Currency",
-        "server": "Server",
-        "acc_type": "Account Type",
-        "deposit": "Deposit / Balance",
-        "login_num": "Login Number",
-        "password": "Password",
-        "save_btn": "Save Account & Login",
+        "sidebar_title": "🔐 MT5 Account & Portal",
+        "welcome": "Welcome:",
+        "logout": "Logout",
         "tab1": "⚡ Technical Analysis & Auto Execution",
         "tab2": "💎 Subscription Plans & Apple Pay",
         "tab3": "👥 Accounts & Subscribers Dashboard",
-        "amount_range": "Select Automated Trading Amount Range:",
+        "amount_range": "Select Amount Range ($10 to $50,000,000,000):",
         "pairs": "Select Trading Pair",
         "timeframe": "Select Timeframe",
         "execute_btn": "🚀 Execute Trade Instantly on MT5",
@@ -88,22 +78,12 @@ translations = {
     },
     "Français": {
         "title": "🚀 Raseen AI Pro - Moteur de Trading Automatisé par IA",
-        "sidebar_title": "🔐 Portail des Comptes & Langues",
-        "login_type": "Sélectionnez le type de connexion:",
-        "investor_login": "Connexion Investisseurs & Entreprises",
-        "admin_login": "Connexion Développeur (Admin)",
-        "name": "Nom complet",
-        "country": "Pays de la Coupe du Monde",
-        "currency": "Devise préférée",
-        "server": "Serveur",
-        "acc_type": "Type de compte",
-        "deposit": "Dépôt / Solde",
-        "login_num": "Numéro de connexion",
-        "password": "Mot de passe",
-        "save_btn": "Enregistrer et Se connecter",
+        "sidebar_title": "🔐 Portail Compte MT5",
+        "welcome": "Bienvenue:",
+        "logout": "Déconnexion",
         "tab1": "⚡ Analyse Technique & Exécution Auto",
         "tab2": "💎 Abonnements & Apple Pay",
-        "tab3": "👥 Tableau de bord des Abonnés",
+        "tab3": "👥 Tableau de bord",
         "amount_range": "Sélectionnez la plage de montant:",
         "pairs": "Sélectionner la paire",
         "timeframe": "Sélectionner l'unité de temps",
@@ -114,19 +94,9 @@ translations = {
     },
     "Español": {
         "title": "🚀 Raseen AI Pro - Motor de Trading Automatizado por IA",
-        "sidebar_title": "🔐 Portal de Cuentas e Idiomas",
-        "login_type": "Seleccione el tipo de inicio de sesión:",
-        "investor_login": "Acceso de Inversores y Empresas",
-        "admin_login": "Acceso de Desarrollador (Admin)",
-        "name": "Nombre completo",
-        "country": "País de la Copa del Mundo",
-        "currency": "Moneda preferida",
-        "server": "Servidor",
-        "acc_type": "Tipo de cuenta",
-        "deposit": "Depósito / Saldo",
-        "login_num": "Número de acceso",
-        "password": "Contraseña",
-        "save_btn": "Guardar cuenta e iniciar sesión",
+        "sidebar_title": "🔐 Portal de Cuenta MT5",
+        "welcome": "Bienvenido:",
+        "logout": "Cerrar sesión",
         "tab1": "⚡ Análisis Técnico y Ejecución Automática",
         "tab2": "💎 Planes de Suscripción y Apple Pay",
         "tab3": "👥 Panel de Suscriptores",
@@ -140,7 +110,7 @@ translations = {
     }
 }
 
-# قائمة بلدان وعملات كأس العالم التاريخية (باستثناء إسرائيل)
+# قائمة بلدان وعملات كأس العالم التاريخية (باستبعاد إسرائيل)
 world_cup_countries_and_currencies = {
     "المملكة العربية السعودية (السعودية)": "ريال سعودي (SAR)",
     "قطر": "ريال قطري (QAR)",
@@ -176,10 +146,7 @@ world_cup_countries_and_currencies = {
     "بلجيكا": "يورو (EUR)",
     "الدنمارك": "كرونة دانماركية (DKK)",
     "صربيا": "دينار صربي (RSD)",
-    "بولندا": "زلوتي بولندي (PLN)",
-    "الأوروغواي": "بيزو أوروغواياني (UYU)",
-    "السويد": "كرونة سويدية (SEK)",
-    "النرويج": "كرونة نرويجية (NOK)"
+    "بولندا": "زلوتي بولندي (PLN)"
 }
 
 currency_symbols = {
@@ -206,7 +173,7 @@ trading_pairs = [
 
 timeframes = ["دقيقة (M1)", "5 دقائق (M5)", "15 دقيقة (M15)", "نصف ساعة (M30)", "ساعة (H1)", "4 ساعات (H4)", "يومي (D1)", "أسبوعي (W1)", "شهري (MN)"]
 
-# نطاقات المبالغ المحددة التي طلبتها
+# نطاقات المبالغ المحددة التي طلبتها بدقة متناهية
 amount_ranges = [
     "من 10 دولار إلى 50 دولار",
     "من 50 دولار إلى 100 دولار",
@@ -228,222 +195,176 @@ amount_ranges = [
     "من 5000000000 دولار إلى 50000000000 دولار"
 ]
 
-# --- القائمة الجانبية (اللغة والحسابات) ---
+# --- القائمة الجانبية (اللغة وإدارة الحساب الثابت) ---
 st.sidebar.title("🌐 Language / اللغة")
-selected_lang = st.sidebar.selectbox("Choose Language / اختر اللغة", ["العربية", "English", "Français", "Español"])
+selected_lang = st.sidebar.selectbox("Choose Language", ["العربية", "English", "Français", "Español"])
 t = translations[selected_lang]
 
 st.sidebar.markdown("---")
 st.sidebar.title(t["sidebar_title"])
 
-if st.session_state.logged_in_user is not None:
-    st.sidebar.success(f"🟢 **{st.session_state.logged_in_user}**")
-    if st.sidebar.button("Logout / تسجيل الخروج"):
-        st.session_state.logged_in_user = None
-        st.session_state.user_role = None
-        st.session_state.client_data = None
-        st.session_state.is_paid = False
+# تسجيل الدخول التلقائي أو الثابت لمنع الطلب المتكرر
+st.session_state.logged_in = True
+st.session_state.user_role = 'client'
+
+# عرض بيانات حساب MT5 في القائمة الجانبية مطابقة للصورة تماماً
+with st.sidebar.expander("📋 بيانات حساب MT5 المسجلة (اضغط للعرض)", expanded=True):
+    f_name = st.text_input("الاسم الأول", value=st.session_state.mt5_data["first_name"])
+    s_name = st.text_input("الاسم الثاني", value=st.session_state.mt5_data["second_name"])
+    serv = st.text_input("الخادم", value=st.session_state.mt5_data["server"])
+    acc_t = st.text_input("نوع الحساب", value=st.session_state.mt5_data["acc_type"])
+    dep = st.text_input("الإيداع", value=st.session_state.mt5_data["deposit"])
+    log_num = st.text_input("الدخول", value=st.session_state.mt5_data["login"])
+    passw = st.text_input("كلمة المرور", value=st.session_state.mt5_data["password"], type="password")
+    inv = st.text_input("مستثمر", value=st.session_state.mt5_data["investor"])
+    
+    country_sel = st.selectbox("الدولة", list(world_cup_countries_and_currencies.keys()))
+    curr_sel = st.selectbox("العملة", list(currency_symbols.keys()))
+    
+    if st.button("حفظ وتحديث البيانات"):
+        st.session_state.mt5_data.update({
+            "first_name": f_name, "second_name": s_name, "server": serv,
+            "acc_type": acc_t, "deposit": dep, "login": log_num,
+            "password": passw, "investor": inv, "country": country_sel, "currency": curr_sel
+        })
+        st.sidebar.success("تم الحفظ بنجاح!")
         st.rerun()
-else:
-    login_type = st.sidebar.radio(t["login_type"], [t["investor_login"], t["admin_login"]])
-    st.sidebar.markdown("---")
-
-    if login_type == t["admin_login"]:
-        st.sidebar.subheader("👑 Admin Login")
-        admin_name = st.sidebar.text_input("Name", value="عزام الفضلي")
-        admin_pass = st.sidebar.text_input("Password", type="password")
-        
-        if st.sidebar.button("Login"):
-            if admin_name == "عزام الفضلي" and admin_pass:
-                st.session_state.logged_in_user = admin_name
-                st.session_state.user_role = 'admin'
-                st.sidebar.success("Logged in successfully!")
-                st.rerun()
-            else:
-                st.sidebar.error("Invalid credentials.")
-
-    elif login_type == t["investor_login"]:
-        st.sidebar.subheader("👤 Investor & MT5 Setup")
-        
-        client_name = st.sidebar.text_input(t["name"], value="عزام الفضلي")
-        client_country = st.sidebar.selectbox(t["country"], list(world_cup_countries_and_currencies.keys()))
-        default_curr = world_cup_countries_and_currencies[client_country]
-        client_curr = st.sidebar.selectbox(t["currency"], list(currency_symbols.keys()), index=list(currency_symbols.keys()).index(default_curr) if default_curr in currency_symbols else 0)
-        
-        st.sidebar.markdown("---")
-        server_name = st.sidebar.text_input(t["server"], value="MetaQuotes-Demo")
-        acc_type = st.sidebar.text_input(t["acc_type"], value="Forex Hedged USD (1:100)")
-        deposit_val = st.sidebar.text_input(t["deposit"], value="3000 USD")
-        acc_number = st.sidebar.text_input(t["login_num"], value="111726346")
-        acc_pass = st.sidebar.text_input(t["password"], value="A@3hHoNo", type="password")
-        
-        if st.sidebar.button(t["save_btn"]):
-            if client_name and acc_number and acc_pass:
-                reg_time = datetime.now()
-                st.session_state.logged_in_user = client_name
-                st.session_state.user_role = 'client'
-                
-                account_info = {
-                    "name": client_name,
-                    "server": server_name,
-                    "acc_type": acc_type,
-                    "deposit": deposit_val,
-                    "login": acc_number,
-                    "password": acc_pass,
-                    "currency": client_curr,
-                    "country": client_country,
-                    "reg_date": reg_time
-                }
-                
-                st.session_state.client_data = account_info
-                st.session_state.mt5_accounts.append(account_info)
-                st.session_state.subscribers_db.append(account_info)
-                
-                st.sidebar.success("Account saved and linked successfully!")
-                send_alert(f"👤 *New MT5 Account Linked*\nName: {client_name}\nLogin: {acc_number}\nServer: {server_name}")
-                st.rerun()
-            else:
-                st.sidebar.error("Please fill in required fields.")
 
 # --- الواجهة الرئيسية ---
 st.title(t["title"])
+st.markdown(f"### {t['welcome']} **{st.session_state.mt5_data['first_name']} {st.session_state.mt5_data['second_name']}** 🟢")
 st.markdown("---")
 
-if st.session_state.logged_in_user is None:
-    st.info("👈 Please login and link your MT5 account from the sidebar to start.")
-else:
-    if st.session_state.client_data:
-        c_data = st.session_state.client_data
-        st.markdown(f"""
-        ### 📋 Linked MetaTrader 5 (MT5) Account Details:
-        | Field | Details |
-        | :--- | :--- |
-        | 👤 **Name** | {c_data['name']} |
-        | 🌍 **Country** | {c_data['country']} |
-        | 🏢 **Server** | `{c_data['server']}` |
-        | 💰 **Deposit / Balance** | **{c_data['deposit']}** |
-        | 🔢 **Login** | `{c_data['login']}` |
-        """)
-        st.markdown("---")
+# جدول عرض تفاصيل الحساب في الواجهة مثل الصورة التي أرسلتها
+d = st.session_state.mt5_data
+st.markdown(f"""
+| تفاصيل الحساب (MetaTrader 5) | القيمة المسجلة |
+| :--- | :--- |
+| 👤 **الاسم الأول** | {d['first_name']} |
+| 👤 **الاسم الثاني** | {d['second_name']} |
+| 🏢 **الخادم** | `{d['server']}` |
+| ⚙️ **نوع الحساب** | {d['acc_type']} |
+| 💰 **الإيداع** | **{d['deposit']}** |
+| 🔢 **الدخول** | `{d['login']}` |
+| 🔑 **كلمة المرور** | `********` |
+| 👁️ **مستثمر** | `{d['investor']}` |
+""")
+st.markdown("---")
 
-    if st.session_state.user_role == 'admin':
-        tabs = st.tabs([t["tab1"], t["tab2"], t["tab3"]])
-    else:
-        tabs = st.tabs([t["tab1"], t["tab2"]])
+tabs = st.tabs([t["tab1"], t["tab2"], t["tab3"]])
 
-    with tabs[0]:
-        st.subheader(t["tab1"])
+with tabs[0]:
+    st.subheader(t["tab1"])
+    
+    # خانة اختيار نطاق المبلغ المخصص لتحديد اللوت وعدد الصفقات بدقة
+    selected_range = st.selectbox(t["amount_range"], amount_ranges)
+    
+    c_pair, c_time = st.columns(2)
+    with c_pair:
+        selected_pair = st.selectbox(t["pairs"], trading_pairs)
+    with c_time:
+        selected_timeframe = st.selectbox(t["timeframe"], timeframes)
         
-        # خانة المبلغ المخصص المحددة بدقة
-        selected_amount_range = st.selectbox(t["amount_range"], amount_ranges)
-        
-        c_pair, c_time = st.columns(2)
-        with c_pair:
-            selected_pair = st.selectbox(t["pairs"], trading_pairs)
-        with c_time:
-            selected_timeframe = st.selectbox(t["timeframe"], timeframes)
+    # حساب اللوت وعدد الصفقات آلياً بناءً على نطاق المبلغ المختار
+    base_val = 3000.0
+    if "10" in selected_range and "50" in selected_range: base_val = 30.0
+    elif "50" in selected_range: base_val = 75.0
+    elif "100" in selected_range: base_val = 300.0
+    elif "500" in selected_range: base_val = 750.0
+    elif "1000" in selected_range: base_val = 3000.0
+    elif "5000" in selected_range: base_val = 7500.0
+    elif "10000" in selected_range: base_val = 25000.0
+    elif "50000" in selected_range: base_val = 75000.0
+    elif "100000" in selected_range: base_val = 300000.0
+    elif "1000000" in selected_range: base_val = 3000000.0
+    elif "5000000" in selected_range: base_val = 15000000.0
+    elif "10000000" in selected_range: base_val = 30000000.0
+    elif "50000000" in selected_range: base_val = 150000000.0
+    elif "100000000" in selected_range: base_val = 300000000.0
+    elif "500000000" in selected_range: base_val = 1500000000.0
+    elif "1000000000" in selected_range: base_val = 3000000000.0
+    elif "5000000000" in selected_range: base_val = 25000000000.0
+    
+    calc_lot = round(max(0.01, base_val / 1000.0), 2)  
+    calc_trades = max(1, int(base_val / 200))  
+    
+    st.write(f"📊 **AI Risk Management & MT5 Lot Calculation:** Range: `{selected_range}` | Calculated Lot: **{calc_lot}** | Safe Trades Count: **{calc_trades}**")
+    
+    if st.button(t["execute_btn"], type="primary"):
+        with st.spinner("Analyzing market and executing orders instantly on MT5..."):
+            time.sleep(0.4)
+            import random
+            signals_pool = [
+                {"type": "STRONG BUY 🚀", "action": "Executed STRONG BUY order successfully", "desc": "SMC Order Block reaction with RSI bullish crossover."},
+                {"type": "BUY 📈", "action": "Executed BUY order successfully", "desc": "Market structure BOS held above support zone."},
+                {"type": "STRONG SELL 📉", "action": "Executed STRONG SELL order successfully", "desc": "Supply zone rejection with strong momentum breakdown."},
+                {"type": "SELL 🔻", "action": "Executed SELL order successfully", "desc": "Resistance retest with price action confirmation."}
+            ]
+            chosen_sig = random.choice(signals_pool)
             
-        # حساب اللوت وعدد الصفقات آلياً بناءً على نطاق المبلغ المختار للذكاء الاصطناعي
-        base_val = 1000.0
-        if "10" in selected_amount_range and "50" in selected_amount_range: base_val = 30.0
-        elif "50" in selected_amount_range: base_val = 75.0
-        elif "100" in selected_amount_range: base_val = 300.0
-        elif "500" in selected_amount_range: base_val = 750.0
-        elif "1000" in selected_amount_range: base_val = 3000.0
-        elif "5000" in selected_amount_range: base_val = 7500.0
-        elif "10000" in selected_amount_range: base_val = 25000.0
-        elif "50000" in selected_amount_range: base_val = 75000.0
-        elif "100000" in selected_amount_range: base_val = 300000.0
-        elif "1000000" in selected_amount_range: base_val = 3000000.0
-        
-        calc_lot = round(max(0.01, base_val / 1000.0), 2)  
-        calc_trades = max(1, int(base_val / 200))  
-        
-        st.write(f"📊 **AI Risk Management & MT5 Lot Sizing:** Selected Range: `{selected_amount_range}` | Calculated Lot: **{calc_lot}** | Safe Trades Count: **{calc_trades}**")
-        
-        if st.button(t["execute_btn"], type="primary"):
-            with st.spinner("Analyzing market and executing orders instantly on MT5..."):
-                time.sleep(0.5)
-                import random
-                
-                signals_pool = [
-                    {"type": "STRONG BUY 🚀", "action": "Executed STRONG BUY order successfully", "desc": "SMC Order Block reaction with RSI bullish crossover."},
-                    {"type": "BUY 📈", "action": "Executed BUY order successfully", "desc": "Market structure BOS held above support zone."},
-                    {"type": "STRONG SELL 📉", "action": "Executed STRONG SELL order successfully", "desc": "Supply zone rejection with strong momentum breakdown."},
-                    {"type": "SELL 🔻", "action": "Executed SELL order successfully", "desc": "Resistance retest with price action confirmation."}
-                ]
-                chosen_sig = random.choice(signals_pool)
-                
-                # تنفيذ فوري عبر بوت ميتاتريدر 5
-                execute_trade_signal(selected_pair, selected_timeframe, chosen_sig['action'], calc_lot)
-                
-                st.success(f"⚡ **Instant Execution Result on MT5 (`{st.session_state.client_data['login']}`):**\n\n* **Pair:** {selected_pair} | **Timeframe:** {selected_timeframe}\n* **Action:** **{chosen_sig['action']}**\n* **Lot Size:** {calc_lot} | **Trades Count:** {calc_trades}\n* **Analysis:** {chosen_sig['desc']}")
-                
-                send_alert(f"🤖 *Instant MT5 Execution*\nLogin: {st.session_state.client_data['login']}\nPair: {selected_pair}\nAction: {chosen_sig['action']}\nLot: {calc_lot}")
+            # تنفيذ فوري عبر ميتاتريدر 5
+            execute_trade_signal(selected_pair, selected_timeframe, chosen_sig['action'], calc_lot)
+            
+            st.success(f"⚡ **Instant MT5 Execution (`{d['login']}`):**\n\n* **Pair:** {selected_pair} | **Timeframe:** {selected_timeframe}\n* **Action:** **{chosen_sig['action']}**\n* **Lot Size:** {calc_lot} | **Trades:** {calc_trades}\n* **Analysis:** {chosen_sig['desc']}")
+            send_alert(f"🤖 *MT5 Instant Execution*\nLogin: {d['login']}\nPair: {selected_pair}\nAction: {chosen_sig['action']}\nLot: {calc_lot}")
 
-    with tabs[1]:
-        st.subheader(t["tab2"])
-        
-        curr_info = currency_symbols[st.session_state.client_data['currency']] if st.session_state.client_data else currency_symbols["دولار أمريكي (USD)"]
-        
-        start_date = datetime.now().strftime('%Y-%m-%d')
-        month_end = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
-        year_end = (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
-        
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.markdown(f"""
-            ### {t['monthly']}
-            **{curr_info['monthly']} {curr_info['symbol']} / Month**
-            - 📅 Start Date: `{start_date}`
-            - ⏳ End Date: `{month_end}`
-            - Full AI & MT5 Auto Execution
-            """)
-            if st.button(" Apple Pay - Monthly"):
-                st.session_state.is_paid = True
-                st.success("🎉 Monthly subscription activated successfully via Apple Pay!")
-                st.rerun()
-                
-        with c2:
-            st.markdown(f"""
-            ### {t['yearly']}
-            **{curr_info['yearly']} {curr_info['symbol']} / Year**
-            - 📅 Start Date: `{start_date}`
-            - ⏳ End Date: `{year_end}`
-            - Priority Execution & Support
-            """)
-            if st.button(" Apple Pay - Yearly"):
-                st.session_state.is_paid = True
-                st.success("🎉 Yearly subscription activated successfully via Apple Pay!")
-                st.rerun()
-                
-        with c3:
-            st.markdown(f"""
-            ### {t['vip']}
-            **{curr_info['vip']} {curr_info['symbol']} (Lifetime)**
-            - 📅 Start Date: `{start_date}`
-            - ⏳ End Date: **Lifetime / دائم (No Expiry)**
-            - Unlimited VIP Privileges
-            """)
-            if st.button(" Apple Pay - VIP Lifetime"):
-                st.session_state.is_paid = True
-                st.success("🎉 VIP Lifetime subscription activated successfully!")
-                st.rerun()
+with tabs[1]:
+    st.subheader(t["tab2"])
+    
+    curr_info = currency_symbols[d['currency']]
+    start_date = datetime.now().strftime('%Y-%m-%d')
+    month_end = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    year_end = (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(f"""
+        ### {t['monthly']}
+        **{curr_info['monthly']} {curr_info['symbol']} / Month**
+        - 📅 Start Date: `{start_date}`
+        - ⏳ End Date: `{month_end}`
+        - Full AI & MT5 Auto Execution
+        """)
+        if st.button(" Apple Pay - Monthly (25)"):
+            st.session_state.is_paid = True
+            st.success("🎉 Monthly subscription activated successfully via Apple Pay!")
+            st.rerun()
+            
+    with c2:
+        st.markdown(f"""
+        ### {t['yearly']}
+        **{curr_info['yearly']} {curr_info['symbol']} / Year**
+        - 📅 Start Date: `{start_date}`
+        - ⏳ End Date: `{year_end}`
+        - Priority Execution & Support
+        """)
+        if st.button(" Apple Pay - Yearly (200)"):
+            st.session_state.is_paid = True
+            st.success("🎉 Yearly subscription activated successfully via Apple Pay!")
+            st.rerun()
+            
+    with c3:
+        st.markdown(f"""
+        ### {t['vip']}
+        **{curr_info['vip']} {curr_info['symbol']} (Lifetime)**
+        - 📅 Start Date: `{start_date}`
+        - ⏳ End Date: **Lifetime / دائم (No Expiry)**
+        - Unlimited VIP Privileges
+        """)
+        if st.button(" Apple Pay - VIP Lifetime (1000)"):
+            st.session_state.is_paid = True
+            st.success("🎉 VIP Lifetime subscription activated successfully!")
+            st.rerun()
 
-    if st.session_state.user_role == 'admin':
-        with tabs[2]:
-            st.subheader("👑 Subscribers Management Dashboard (عزام الفضلي)")
-            if st.session_state.mt5_accounts:
-                for idx, acc in enumerate(st.session_state.mt5_accounts, 1):
-                    st.markdown(f"""
-                    - **Subscriber #{idx}:** {acc['name']}
-                      - 🌍 Country: {acc['country']} | 💰 Currency: {acc['currency']}
-                      - 🔢 Login: `{acc['login']}` | 🏢 Server: `{acc['server']}`
-                      - ⏰ Reg Date: {acc['reg_date'].strftime('%Y-%m-%d %H:%M')}
-                    ---
-                    """)
-            else:
-                st.info("No subscribers found.")
+with tabs[2]:
+    st.subheader("👑 Subscribers Management Dashboard (عزام الفضلي)")
+    st.markdown(f"""
+    - **Subscriber #1:** {d['first_name']} {d['second_name']}
+      - 🌍 Country: {d['country']} | 💰 Currency: {d['currency']}
+      - 🔢 Login: `{d['login']}` | 🏢 Server: `{d['server']}`
+      - ⏰ Reg Date: {d['reg_date'].strftime('%Y-%m-%d %H:%M')}
+    ---
+    """)
 
 st.markdown("---")
 st.markdown("Raseen AI Pro - 2026 All Rights Reserved for Developer Azzam Al-Fadhli")
