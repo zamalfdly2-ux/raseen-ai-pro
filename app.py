@@ -1,200 +1,204 @@
-import streamlit as st
-import time
-import requests
-from datetime import datetime, timedelta
+
+‏import streamlit as st
+‏import time
+‏import requests
+‏from datetime import datetime, timedelta
 
 # إعدادات الصفحة
-st.set_page_config(
-    page_title="Raseen AI Pro - Smart AI Market Analysis",
-    page_icon="🤖",
-    layout="wide"
-)
+‏st.set_page_config(page_title="Raseen AI Pro - Smart Trading", page_icon="🤖", layout="wide")
 
-# بيانات تيليجرام الخاصة بك
-TELEGRAM_BOT_TOKEN = "8858466092:AAF2_YCAukhlvrKgVbBD0levV0i6Gbuag90"
-TELEGRAM_CHAT_ID = "1370315348"
+# بيانات تيليجرام
+‏TELEGRAM_BOT_TOKEN = "8858466092:AAF2_YCAukhlvrKgVbBD0levV0i6Gbuag90"
+‏TELEGRAM_CHAT_ID = "1370315348"
 
-def send_telegram_alert(message):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-        requests.post(url, json=payload)
-    except:
-        pass
+‏def send_telegram_alert(message):
+‏    try:
+‏        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+‏        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
+‏        requests.post(url, json=payload)
+‏    except:
+‏        pass
 
-# تهيئة حالة الجلسة للمشتركين والاشتراكات
-if 'ai_signals_history' not in st.session_state:
-    st.session_state.ai_signals_history = []
-if 'subscribers_db' not in st.session_state:
-    st.session_state.subscribers_db = []
+# تهيئة قاعدة البيانات في الجلسة
+‏if 'ai_signals_history' not in st.session_state:
+‏    st.session_state.ai_signals_history = []
+‏if 'subscribers_db' not in st.session_state:
+‏    st.session_state.subscribers_db = []
+‏if 'logged_in_user' not in st.session_state:
+‏    st.session_state.logged_in_user = None
+‏if 'user_role' not in st.session_state:
+‏    st.session_state.user_role = None  # 'admin' or 'client'
 
-st.title("🚀 Raseen AI Pro - نظام الذكاء الاصطناعي لتحليل السوق وتنبيهات التيليجرام")
-st.markdown("---")
-
-# الدول واللغات (بدون إسرائيل)
-countries_list = [
-    "المملكة العربية السعودية", "المملكة المتحدة", "الولايات المتحدة الأمريكية", 
-    "البرازيل", "الأرجنتين", "فرنسا", "ألمانيا", "إسبانيا", "إيطاليا", 
-    "البرتغال", "المغرب", "اليابان", "كوريا الجنوبية", "مصر", "قطر", 
-    "الإمارات العربية المتحدة", "المكسيك", "كندا", "أستراليا"
+# 🌍 القوائم العالمية (كأس العالم 2010-2026) خالية تماماً من الكيان المرفوض
+‏world_cup_countries = [
+    "المملكة العربية السعودية", "قطر", "المغرب", "مصر", "تونس", "الجزائر", 
+    "البرازيل", "الأرجنتين", "ألمانيا", "إسبانيا", "فرنسا", "إنجلترا", "البرتغال", 
+    "إيطاليا", "هولندا", "كرواتيا", "اليابان", "كوريا الجنوبية", "الولايات المتحدة", 
+    "المكسيك", "كندا", "أوروغواي", "كولومبيا", "تشيلي", "السنغال", "غانا", "الكاميرون", 
+    "نيجيريا", "جنوب أفريقيا", "أستراليا", "سويسرا", "بلجيكا", "الدنمارك", "صربيا", "بولندا"
 ]
-languages_list = ["العربية", "English", "Español", "Français", "Deutsch", "Italiano", "Português", "日本語"]
 
-st.sidebar.header("🌐 إعدادات المنصة")
-selected_country = st.sidebar.selectbox("اختر الدولة", countries_list)
-selected_lang = st.sidebar.selectbox("اختر اللغة", languages_list)
+‏world_cup_languages = [
+    "العربية", "English", "Español", "Français", "Deutsch", "Português", 
+‏    "Italiano", "Nederlands", "Hrvatski", "日本語", "한국어", "Polski"
+]
 
-st.sidebar.markdown("---")
-st.sidebar.header("👤 بيانات المشترك، المستثمر أو الشركة")
+‏world_cup_currencies = [
+    "ريال سعودي (SAR)", "دولار أمريكي (USD)", "يورو (EUR)", "جنيه إسترليني (GBP)", 
+    "ين ياباني (JPY)", "ريال قطري (QAR)", "درهم مغربي (MAD)", "جنيه مصري (EGP)", 
+    "ريال برازيلي (BRL)", "بيزو أرجنتيني (ARS)", "دولار كندي (CAD)", "دولار أسترالي (AUD)", "فرنك سويسري (CHF)"
+]
 
-# إدخال المعلومات الشخصية ومعلومات الحساب
-sub_name = st.sidebar.text_input("الاسم الكامل / اسم المؤسسة")
-sub_age = st.sidebar.number_input("العمر / سنة التأسيس", min_value=18, max_value=120, value=25)
-sub_email = st.sidebar.text_input("البريد الإلكتروني")
+‏trading_pairs = [
+    "الذهب (XAUUSD)", "الفضة (XAGUSD)", "النفط (WTI)", "EUR/USD", "GBP/USD", 
+‏    "USD/JPY", "USD/CHF", "AUD/USD", "USDCAD", "مؤشر داو جونز (US30)", 
+    "مؤشر ناسداك (NAS100)", "بيتكوين (BTCUSD)"
+]
 
-account_mode = st.sidebar.selectbox("نوع الحساب", ["حساب تجريبي (Demo - مجاني ودائم)", "حقيقي (Live - تجربة 15 يوم)"])
-acc_number = st.sidebar.text_input("رقم الحساب (Login)", value="10012369762")
-server_name = st.sidebar.text_input("اسم السيرفر (Server)", value="MetaQuotes-Demo")
-acc_pass = st.sidebar.text_input("كلمة المرور (Password)", type="password")
+‏timeframes = ["دقيقة (M1)", "5 دقائق (M5)", "15 دقيقة (M15)", "نصف ساعة (M30)", "ساعة (H1)", "4 ساعات (H4)", "يومي (D1)", "أسبوعي (W1)", "شهري (MN)"]
 
-# زر الحفظ والتسجيل
-if st.sidebar.button("تسجيل وحفظ بيانات المشترك"):
-    if sub_name and sub_email and acc_number and acc_pass:
-        reg_time = datetime.now()
-        sub_data = {
-            "name": sub_name,
-            "age": sub_age,
-            "email": sub_email,
-            "account": acc_number,
-            "server": server_name,
-            "type": account_mode,
-            "reg_date": reg_time
-        }
-        st.session_state.subscribers_db.append(sub_data)
-        st.sidebar.success(f"تم تسجيل المشترك ({sub_name}) بنجاح!")
-        send_telegram_alert(f"👤 *مستثمر/مشترك جديد سجّل في المنصة*\nالاسم: {sub_name}\nالعمر: {sub_age}\nالبريد: {sub_email}\nنوع الحساب: {account_mode}\nرقم الحساب: {acc_number}")
-    else:
-        st.sidebar.error("يرجى إكمال جميع الحقول المطلوبة (الاسم، البريد، رقم الحساب، كلمة المرور)")
+# --- الواجهة الجانبية: نظام تسجيل الدخول المنفصل ---
+‏st.sidebar.title("🔐 بوابة الدخول")
+‏login_type = st.sidebar.radio("اختر نوع الدخول:", ["دخول المستثمرين والشركات", "دخول الصانع والمبرمج (المدير)"])
 
-# فحص صلاحية الحساب الحقيقي (15 يوم تجربة)
-is_subscription_active = True
-if "حقيقي" in account_mode:
-    if st.session_state.subscribers_db:
-        user_reg = st.session_state.subscribers_db[-1]["reg_date"]
-        if datetime.now() > user_reg + timedelta(days=15):
-            is_subscription_active = False
+‏st.sidebar.markdown("---")
 
-# الأقسام الرئيسية
-tab1, tab2, tab3, tab4 = st.tabs([
-    "⚡ تحليل الذكاء الاصطناعي وتنبيهات التيليجرام", 
-    "📊 شارت وتحليل السوق (SMC & RSI)", 
-    "💎 باقات الاشتراك",
-    "👥 إدارة ومعلومات المشتركين (خاصة بك)"
-])
-
-with tab1:
-    st.subheader("⚡ نظام الذكاء الاصطناعي لتحليل السوق وإرسال التنبيهات")
+‏if login_type == "دخول الصانع والمبرمج (المدير)":
+‏    st.sidebar.subheader("👑 تسجيل دخول المبرمج")
+‏    admin_name = st.sidebar.text_input("الاسم", value="عزام الفضلي")
+‏    admin_email = st.sidebar.text_input("البريد الإلكتروني")
+‏    admin_pass = st.sidebar.text_input("كلمة المرور", type="password")
     
-    if not is_subscription_active:
-        st.error("⚠️ انتهت فترة التجربة المجانية (15 يوماً) لحسابك الحقيقي. تم قفل خدمة تحليلات وتنبيهات الذكاء الاصطناعي، يرجى الاشتراك في إحدى الباقات أدناه لتفعيل الخدمة واستمرار التيليجرام.")
-    else:
-        st.write("يقوم الذكاء الاصطناعي بتحليل السوق باستخدام المؤشرات المتقدمة (Smart Money, Price Action, RSI) ويقوم بحساب الصفقات واللوت المناسب بناءً على رأس المال المودع، ثم يرسل التنبيه الفوري لك ولتيليجرام.")
-        
-        # خانة الإيداع اليدوي لتحديد رأس المال وحساب الصفقات واللوت آلياً
-        st.markdown("### 💰 إدخال رأس المال والإيداع اليدوي")
-        manual_deposit = st.number_input("أدخل قيمة رأس المال أو الإيداع اليدوي ($):", min_value=1.0, value=10.0, step=5.0)
-        
-        # حساب الشغلتين بالذكاء الاصطناعي بناءً على الإيداع:
-        # 1. حساب كم صفقة وكم حجم اللوت (Lot Size) المقترح
-        calculated_lots = round(max(0.01, manual_deposit / 1000.0), 2)  
-        calculated_trades_count = max(1, int(manual_deposit / 5))  
-        
-        col_d1, col_d2, col_d3, col_d4 = st.columns(4)
-        col_d1.metric("رأس المال المودع", f"${manual_deposit:.2f}")
-        col_d2.metric("حجم اللوت المقترح (Lot)", f"{calculated_lots}")
-        col_d3.metric("عدد الصفقات المقترحة", f"{calculated_trades_count}")
-        col_d4.metric("حالة الذكاء الاصطناعي", "نشط ويحلل 🟢", "جاهز")
-        
-        st.markdown("---")
-        
-        # زر فحص السوق بالذكاء الاصطناعي وإرسال التنبيهات
-        if st.button("🔍 فحص السوق بالذكاء الاصطناعي وإرسال التنبيهات (تطبيق + تيليجرام)", type="primary"):
-            with st.spinner("جاري تحليل الشارت واستخراج إشارات الذهب والمؤشرات وإرسال التنبيه..."):
-                time.sleep(1.5)
-                
-                import random
-                signals = [
-                    {"signal": "طلوع قوي 🚀", "action": "فرصة شراء (BUY)", "price": "4029.50", "target": "4100.00", "lot": calculated_lots, "analysis": "ارتداد قوي من منطقة Order Block مع سيولة شرائية عالية."},
-                    {"signal": "نزول قوي 📉", "action": "فرصة بيع (SELL)", "price": "4028.10", "target": "3950.00", "lot": calculated_lots, "analysis": "كسر هيكل السوق (BOS) مع تشبع شرائي على مؤشر RSI."},
-                    {"signal": "طلوع عادي 📈", "action": "فرصة شراء (BUY)", "price": "4029.00", "target": "4060.00", "lot": calculated_lots, "analysis": "استقرار السعر فوق مناطق دعم رئيسية."},
-                    {"signal": "نزول عادي 🔻", "action": "فرصة بيع (SELL)", "price": "4028.50", "target": "4000.00", "lot": calculated_lots, "analysis": "اختبار خط المقاومة العرضي."}
-                ]
-                chosen = random.choice(signals)
-                
-                st.success(f"🤖 **إشارة الذكاء الاصطناعي:** {chosen['signal']}")
-                st.info(f"📊 **التفاصيل:** {chosen['action']} | اللوت المقترح: {chosen['lot']} | السعر: {chosen['price']} | الهدف: {chosen['target']}")
-                
-                # حفظ في السجل وتنبيه تيليجرام
-                st.session_state.ai_signals_history.insert(0, chosen)
-                send_telegram_alert(f"🤖 *تنبيه تحليل الذكاء الاصطناعي*\nالحساب: {acc_number}\nالإيداع: ${manual_deposit}\nاللوت المقترح: {chosen['lot']}\nالحالة: *{chosen['signal']}*\nالإجراء: {chosen['action']}\nالسعر: {chosen['price']}\nالهدف: {chosen['target']}\nالتحليل: {chosen['analysis']}")
+‏    if st.sidebar.button("تسجيل الدخول كمدير"):
+‏        if admin_name == "عزام الفضلي" and admin_pass: # يمكنك تغيير الشرط ليكون أكثر تعقيداً لاحقاً
+‏            st.session_state.logged_in_user = admin_name
+‏            st.session_state.user_role = 'admin'
+‏            st.sidebar.success("تم تسجيل الدخول بنجاح بصلاحيات المبرمج الكاملة! 🟢")
+‏            st.rerun()
+‏        else:
+‏            st.sidebar.error("بيانات المبرمج غير صحيحة.")
 
-        st.markdown("### سجل تنبيهات وتحليلات الذكاء الاصطناعي السابقة:")
-        if st.session_state.ai_signals_history:
-            for s in st.session_state.ai_signals_history:
-                st.write(f"🔹 الحالة: **{s['signal']}** | التوجيه: **{s['action']}** | اللوت: {s['lot']} | السعر: {s['price']} | الهدف: {s['target']} | 📝 {s['analysis']}")
-        else:
-            st.info("لم يتم رصد إشارات بعد. اضغط على زر الفحص لتشغيل تحليل الذكاء الاصطناعي.")
-
-with tab2:
-    st.subheader("📊 تحليل السوق الفوري والمؤشرات الفنية (SMC & Price Action & RSI)")
-    asset = st.selectbox("اختر الأصل المالي للمتابعة", ["الذهب (XAUUSD)", "EUR/USD", "مؤشر DAX (GER30)", "النفط الخام (WTI)"])
-    st.write(f"الذكاء الاصطناعي يراقب شارت **{asset}** لحظياً عبر مؤشرات سيولة الأسواق، نقاط الـ Order Blocks، واتجاهات الـ RSI لاستخراج أقوى الفرص للمستثمرين والمتداولين والشركات العالمية.")
-
-with tab3:
-    st.subheader("💎 باقات الاشتراك للمستثمرين، المتداولين والشركات العالمية")
-    st.write("بعد انتهاء فترة التجربة المجانية (15 يوماً) للحسابات الحقيقية، يمكنك اختيار إحدى الباقات التالية لتفعيل تحليلات الذكاء الاصطناعي وتنبيهات التيليجرام بلا توقف:")
+‏elif login_type == "دخول المستثمرين والشركات":
+‏    st.sidebar.subheader("👤 تسجيل بيانات المستثمر/الشركة")
     
-    c1, c2, c3 = st.columns(3)
-    c1.markdown("""
-    ### الباقة الشهرية
-    **25 ريال / شهرياً**
-    - تحليلات الذكاء الاصطناعي الكاملة
-    - تنبيهات تيليجرام فورية 24/7
-    - دعم فني للمتداولين الأفراد
-    """)
-    c2.markdown("""
-    ### الباقة السنوية
-    **200 ريال / سنوياً**
-    - توفير 30%
-    - تنبيهات متقدمة للشركات والمؤسسات
-    - أولوية قصوى في سرعة إرسال الإشارات
-    """)
-    c3.markdown("""
-    ### مدى الحياة (VIP)
-    **1000 ريال (دائم)**
-    - صلاحيات مطلقة مدى الحياة
-    - ربط غير محدود وتخصيص المؤشرات
-    - استشارات خاصة للمستثمرين الكبار
-    """)
-
-with tab4:
-    st.subheader("👥 لوحة إدارة ومعلومات المشتركين (خاصة بك)")
-    st.write("هنا يمكنك الاطلاع على تفاصيل جميع الأشخاص والمستثمرين والشركات الذين قاموا بالتسجيل في المنصة (الأسماء، الأعمار/سنوات التأسيس، البريد الإلكتروني، الحسابات):")
+‏    client_name = st.sidebar.text_input("الاسم الكامل / اسم الشركة")
+‏    client_age = st.sidebar.number_input("العمر / سنة التأسيس", min_value=18, max_value=200, value=25)
+‏    client_email = st.sidebar.text_input("البريد الإلكتروني")
+‏    client_country = st.sidebar.selectbox("الدولة", world_cup_countries)
+‏    client_lang = st.sidebar.selectbox("اللغة", world_cup_languages)
+‏    client_curr = st.sidebar.selectbox("العملة المفضلة", world_cup_currencies)
     
-    if st.session_state.subscribers_db:
-        for idx, sub in enumerate(st.session_state.subscribers_db, 1):
-            st.markdown(f"""
-            - **المشترك/الشركة #{idx}:** {sub['name']}
-              - 🎂 **العمر/سنة التأسيس:** {sub['age']}
-              - 📧 **البريد الإلكتروني:** {sub['email']}
-              - 💼 **نوع الحساب:** {sub['type']}
-              - 🔢 **رقم الحساب:** {sub['account']}
-              - 🌐 **السيرفر:** {sub['server']}
-              - ⏰ **تاريخ التسجيل:** {sub['reg_date'].strftime('%Y-%m-%d %H:%M')}
-            ---
-            """)
-    else:
-        st.info("لا توجد سجلات للمشتركين حتى الآن.")
+‏    account_mode = st.sidebar.selectbox("نوع الحساب", ["حساب تجريبي (Demo - مجاني ودائم)", "حقيقي (Live - تجربة 15 يوم)"])
+‏    acc_number = st.sidebar.text_input("رقم الحساب (Login)")
+‏    server_name = st.sidebar.text_input("اسم السيرفر (Server)")
+‏    acc_pass = st.sidebar.text_input("كلمة المرور للمنصة", type="password")
+    
+‏    if st.sidebar.button("تسجيل وحفظ البيانات"):
+‏        if client_name and client_email and acc_number and acc_pass:
+‏            reg_time = datetime.now()
+            # في الحقيقة نحن نضيف المستخدم لقاعدة البيانات، وهنا نعتبره سجل دخوله فوراً
+‏            st.session_state.logged_in_user = client_name
+‏            st.session_state.user_role = 'client'
+‏            st.session_state.client_data = {
+‏                "name": client_name, "age": client_age, "email": client_email, 
+‏                "country": client_country, "acc_type": account_mode, "reg_date": reg_time
+            }
+‏            st.session_state.subscribers_db.append(st.session_state.client_data)
+‏            st.sidebar.success(f"مرحباً بك {client_name}، تم التسجيل بنجاح!")
+‏            send_telegram_alert(f"👤 *مستثمر جديد*\nالاسم: {client_name}\nالنوع: {account_mode}\nالدولة: {client_country}")
+‏            st.rerun()
+‏        else:
+‏            st.sidebar.error("يرجى إكمال جميع الحقول.")
 
-st.markdown("---")
-st.markdown("Raseen AI Pro - 2026 جميع الحقوق محفوظة")
+# --- المحتوى الرئيسي (Main Content) ---
+‏st.title("🚀 Raseen AI Pro - نظام الذكاء الاصطناعي العالمي")
+‏st.markdown("---")
+
+‏if st.session_state.logged_in_user is None:
+‏    st.info("يرجى تسجيل الدخول من القائمة الجانبية للبدء.")
+‏else:
+    # التحقق من صلاحيات العميل (هل انتهت 15 يوم؟)
+‏    is_locked = False
+‏    if st.session_state.user_role == 'client':
+‏        c_data = st.session_state.client_data
+‏        if "حقيقي" in c_data["acc_type"]:
+            # لمحاكاة التجربة، نحسب الأيام (في التطبيق الفعلي نستخدم التاريخ الحالي)
+‏            days_passed = (datetime.now() - c_data["reg_date"]).days
+‏            if days_passed > 15: # تم القفل
+‏                is_locked = True
+                
+    # إنشاء التبويبات بناءً على الصلاحيات
+‏    if st.session_state.user_role == 'admin':
+‏        tabs = st.tabs(["⚡ تحليل الذكاء الاصطناعي (مفتوح)", "💎 باقات الاشتراك و Apple Pay", "👥 لوحة الإدارة (خاصة بالمبرمج)"])
+‏    else:
+‏        tabs = st.tabs(["⚡ تحليل الذكاء الاصطناعي", "💎 باقات الاشتراك و Apple Pay"])
+
+    # التبويب الأول: التحليل
+‏    with tabs[0]:
+‏        st.subheader("⚡ نظام الذكاء الاصطناعي المتقدم لتحليل الأسواق")
+        
+‏        if is_locked:
+‏            st.error("🔒 **انتهت الفترة التجريبية (15 يوم). تم إيقاف الذكاء الاصطناعي للحساب الحقيقي.**")
+‏            st.warning("يرجى الانتقال لتبويب (باقات الاشتراك) وتجديد الاشتراك عبر Apple Pay لاستمرار الخدمة واستقبال الإشارات.")
+‏        else:
+‏            st.success(f"مرحباً بك يا {st.session_state.logged_in_user}! النظام يعمل بكفاءة 🟢")
+            
+‏            c_asset, c_time = st.columns(2)
+‏            with c_asset:
+‏                selected_pair = st.selectbox("اختر الزوج المالي", trading_pairs)
+‏            with c_time:
+‏                selected_timeframe = st.selectbox("اختر الفريم الزمني (Timeframe)", timeframes)
+                
+‏            manual_deposit = st.number_input("أدخل رأس المال للحساب اليدوي ($):", min_value=1.0, value=1000.0, step=100.0)
+            
+‏            calculated_lots = round(max(0.01, manual_deposit / 1000.0), 2)  
+‏            calculated_trades = max(1, int(manual_deposit / 200))  
+            
+‏            st.write(f"📊 **تحليل رأس المال:** اللوت المناسب: **{calculated_lots}** | الصفقات المتاحة: **{calculated_trades}**")
+            
+‏            if st.button("🔍 تحليل الشارت وإرسال التنبيه الآن", type="primary"):
+‏                with st.spinner("الذكاء الاصطناعي يقرأ البيانات..."):
+‏                    time.sleep(1.5)
+‏                    import random
+‏                    signal_type = random.choice(["شراء 🚀", "بيع 📉"])
+‏                    st.success(f"✅ **إشارة جاهزة على {selected_pair} (فريم {selected_timeframe}): {signal_type}**")
+‏                    send_telegram_alert(f"🤖 *تنبيه ذكاء اصطناعي*\nالزوج: {selected_pair}\nالفريم: {selected_timeframe}\nالإشارة: {signal_type}\nاللوت المقترح: {calculated_lots}")
+
+    # التبويب الثاني: الاشتراكات و Apple Pay
+‏    with tabs[1]:
+‏        st.subheader("💳 باقات الاشتراك المتاحة للشركات والمستثمرين")
+‏        st.write("يمكنك الدفع بأمان وسرعة باستخدام **Apple Pay ** لتفعيل الذكاء الاصطناعي بلا انقطاع.")
+        
+‏        c1, c2, c3 = st.columns(3)
+‏        with c1:
+‏            st.markdown("### الباقة الشهرية\n**25 ريال / شهر**\n- تفعيل الذكاء الاصطناعي\n- جميع الأزواج والفريمات")
+‏            if st.button(" Apple Pay - شراء (25 ريال)"):
+‏                st.success("تم توجيهك لبوابة الدفع (سيتم ربطها قريباً)...")
+‏        with c2:
+‏            st.markdown("### الباقة السنوية\n**200 ريال / سنة**\n- توفير ممتاز\n- دعم فني فوري")
+‏            if st.button(" Apple Pay - شراء (200 ريال)"):
+‏                st.success("تم توجيهك لبوابة الدفع (سيتم ربطها قريباً)...")
+‏        with c3:
+‏            st.markdown("### الباقة المفتوحة (VIP)\n**1000 ريال / مدى الحياة**\n- تملك النظام مدى الحياة\n- استشارات خاصة")
+‏            if st.button(" Apple Pay - شراء (1000 ريال)"):
+‏                st.success("تم توجيهك لبوابة الدفع (سيتم ربطها قريباً)...")
+
+    # التبويب الثالث: لوحة التحكم (للمبرمج فقط)
+‏    if st.session_state.user_role == 'admin':
+‏        with tabs[2]:
+‏            st.subheader("👑 لوحة تحكم المبرمج (عزام الفضلي)")
+‏            st.write("هنا يمكنك رؤية جميع بيانات المستثمرين والشركات المشتركين في المنصة.")
+            
+‏            if st.session_state.subscribers_db:
+‏                for idx, sub in enumerate(st.session_state.subscribers_db, 1):
+‏                    st.markdown(f"""
+                    - **العميل #{idx}:** {sub['name']}
+                      - العمر/سنة التأسيس: {sub['age']} | البريد: {sub['email']}
+                      - الدولة: {sub['country']} | نوع الحساب: {sub['acc_type']}
+                    ---
+                    """)
+‏            else:
+‏                st.info("لا يوجد مشتركين مسجلين حتى الآن.")
+
+‏st.markdown("---")
+‏st.markdown("Raseen AI Pro - 2026 جميع الحقوق محفوظة للمبرمج عزام الفضلي")
