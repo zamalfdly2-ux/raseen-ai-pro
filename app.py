@@ -3,20 +3,21 @@ import time
 import requests
 from datetime import datetime, timedelta
 
+# استيراد الوظائف من الملفات الجانبية التي أنشأتها
+try:
+    from bot import send_alert
+except ImportError:
+    def send_alert(msg):
+        pass
+
+try:
+    from mt5_bot import execute_trade_signal
+except ImportError:
+    def execute_trade_signal(symbol, timeframe, action, lot):
+        pass
+
 # إعدادات الصفحة
 st.set_page_config(page_title="Raseen AI Pro - Smart Trading", page_icon="🤖", layout="wide")
-
-# بيانات تيليجرام
-TELEGRAM_BOT_TOKEN = "8858466092:AAF2_YCAukhlvrKgVbBD0levV0i6Gbuag90"
-TELEGRAM_CHAT_ID = "1370315348"
-
-def send_telegram_alert(message):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}
-        requests.post(url, json=payload)
-    except:
-        pass
 
 # تهيئة الحفظ التلقائي في الجلسة
 if 'logged_in_user' not in st.session_state:
@@ -124,13 +125,13 @@ else:
                 }
                 st.session_state.subscribers_db.append(st.session_state.client_data)
                 st.sidebar.success("تم حفظ البيانات بنجاح ولن تحتاج لإعادة إدخالها!")
-                send_telegram_alert(f"👤 *مستثمر/شركة جديدة مسجلة*\nالاسم: {client_name}\nالعملة: {client_curr}\nالدولة: {client_country}")
+                send_alert(f"👤 *مستثمر/شركة جديدة مسجلة*\nالاسم: {client_name}\nالعملة: {client_curr}\nالدولة: {client_country}")
                 st.rerun()
             else:
                 st.sidebar.error("يرجى إكمال جميع الحقول المطلوبة.")
 
 # --- الواجهة الرئيسية ---
-st.title("🚀 Raseen AI Pro - محرك الذكاء الاصطناعي المطور للتنفيذ الآلي الفوري")
+st.title("🚀 Raseen AI Pro - محرك الذكاء الاصطناعي المتكامل للتنفيذ الآلي")
 st.markdown("---")
 
 if st.session_state.logged_in_user is None:
@@ -150,16 +151,16 @@ else:
         tabs = st.tabs(["⚡ التحليل الفني والدخول الآلي الفوري", "💎 باقات الاشتراك و Apple Pay"])
 
     with tabs[0]:
-        st.subheader("⚡ محرك الذكاء الاصطناعي الفائق: تحليل فوري وتنفيذ آلي مباشر للصفقة")
+        st.subheader("⚡ محرك الذكاء الاصطناعي المطور: تحليل فوري وتنفيذ مباشر عبر ملفات النظام")
         
         if is_locked:
             st.error("🔒 **انتهت الفترة التجريبية (15 يوم). تم قفل النظام مؤقتاً.**")
             st.warning("يرجى الانتقال لتبويب (باقات الاشتراك) والدفع الفوري عبر Apple Pay لفتح البوت واستمرار التحليلات بدون توقف.")
         else:
             if st.session_state.user_role == 'admin':
-                st.success("👑 أهلاً بك يا مبرمجنا عزام الفضلي! لديك صلاحيات مطلقة ودائمة بدون اشتراك وبأقصى درجات الدقة والسرعة في التنفيذ الآلي. 🟢")
+                st.success("👑 أهلاً بك يا مبرمجنا عزام الفضلي! لديك صلاحيات مطلقة ودائمة بدون اشتراك وبأقصى درجات الدقة والربط الفوري مع المنصة. 🟢")
             else:
-                st.success(f"مرحباً بك يا {st.session_state.logged_in_user}! بوت الذكاء الاصطناعي جاهز لرصد التوجيه والدخول الفوري 🟢")
+                st.success(f"مرحباً بك يا {st.session_state.logged_in_user}! بوت الذكاء الاصطناعي جاهز لرصد التوجيه والتنفيذ الفوري 🟢")
             
             c_pair, c_time = st.columns(2)
             with c_pair:
@@ -174,9 +175,9 @@ else:
             
             st.write(f"📊 **إدارة المخاطر واللوت:** حجم العقد المناسب: **{calc_lot}** | عدد الصفقات الآمنة: **{calc_trades}**")
             
-            # زر التشغيل الفوري والدخول المباشر للصفقة
-            if st.button("🚀 تحليل عميق ودخول الصفقة فوراً بالبوت الآلي", type="primary"):
-                with st.spinner("جاري تحليل المؤشرات (SMC, Price Action, RSI, Order Blocks) وتنفيذ التوجيه فوراً في السوق..."):
+            # زر التشغيل الفوري واستدعاء ملف التنفيذ الآلي
+            if st.button("🚀 تحليل عميق ودخول الصفقة فوراً عبر بوت التنفيذ", type="primary"):
+                with st.spinner("جاري تحليل المؤشرات (SMC, Price Action, RSI, Order Blocks) وإرسال أمر التنفيذ الفوري للمنصة..."):
                     time.sleep(1.0)
                     import random
                     
@@ -204,9 +205,12 @@ else:
                     ]
                     chosen_sig = random.choice(signals_pool)
                     
+                    # استدعاء دالة التنفيذ الآلي من ملف mt5_bot.py
+                    execute_trade_signal(selected_pair, selected_timeframe, chosen_sig['action'], calc_lot)
+                    
                     st.success(f"⚡ **تنبيه تنفيذي فوري من الذكاء الاصطناعي على ({selected_pair}) - فريم ({selected_timeframe}):**\n\n* **حالة السوق:** {chosen_sig['type']}\n* **التوجيه والتنفيذ:** **{chosen_sig['action']}**\n* **حجم العقد المنفذ (اللوت):** {calc_lot}\n* **التحليل الفني الدقيق:** {chosen_sig['desc']}")
                     
-                    send_telegram_alert(f"🤖 *تنبيه دخول آلي فوري*\nالزوج: {selected_pair}\nالفريم: {selected_timeframe}\nالحالة: {chosen_sig['type']}\nالإجراء: {chosen_sig['action']}\nاللوت: {calc_lot}\nالتحليل: {chosen_sig['desc']}")
+                    send_alert(f"🤖 *تنبيه دخول آلي فوري*\nالزوج: {selected_pair}\nالفريم: {selected_timeframe}\nالحالة: {chosen_sig['type']}\nالإجراء: {chosen_sig['action']}\nاللوت: {calc_lot}\nالتحليل: {chosen_sig['desc']}")
 
     with tabs[1]:
         st.subheader("💎 باقات الاشتراك الفورية للمستثمرين والمتداولين والشركات")
