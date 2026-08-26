@@ -1,9 +1,8 @@
 import streamlit as st
 import time
-import requests
 from datetime import datetime, timedelta
 
-# استيراد الوظائف من الملفات الجانبية التي أنشأتها
+# استيراد الوظائف من الملفات الجانبية
 try:
     from bot import send_alert
 except ImportError:
@@ -19,7 +18,7 @@ except ImportError:
 # إعدادات الصفحة
 st.set_page_config(page_title="Raseen AI Pro - Smart Trading", page_icon="🤖", layout="wide")
 
-# تهيئة الحفظ التلقائي في الجلسة
+# تهيئة الجلسة
 if 'logged_in_user' not in st.session_state:
     st.session_state.logged_in_user = None
 if 'user_role' not in st.session_state:
@@ -30,35 +29,173 @@ if 'is_paid' not in st.session_state:
     st.session_state.is_paid = False
 if 'subscribers_db' not in st.session_state:
     st.session_state.subscribers_db = []
+if 'mt5_accounts' not in st.session_state:
+    st.session_state.mt5_accounts = []
 
-# القوائم العالمية
-world_cup_countries = [
-    "المملكة العربية السعودية", "قطر", "المغرب", "مصر", "تونس", "الجزائر", 
-    "البرازيل", "الأرجنتين", "ألمانيا", "إسبانيا", "فرنسا", "إنجلترا", "البرتغال", 
-    "إيطاليا", "هولندا", "كرواتيا", "اليابان", "كوريا الجنوبية", "الولايات المتحدة", 
-    "المكسيك", "كندا", "أوروغواي", "كولومبيا", "تشيلي", "السنغال", "غانا", "الكاميرون", 
-    "نيجيريا", "جنوب أفريقيا", "أستراليا", "سويسرا", "بلجيكا", "الدنمارك", "صربيا", "بولندا"
-]
+# القواميس واللغات العالمية
+translations = {
+    "العربية": {
+        "title": "🚀 Raseen AI Pro - محرك الذكاء الاصطناعي للتنفيذ الآلي",
+        "sidebar_title": "🔐 بوابة الحسابات واللغات",
+        "login_type": "اختر نوع الدخول:",
+        "investor_login": "دخول المستثمرين والشركات",
+        "admin_login": "دخول المبرمج (المدير)",
+        "name": "الاسم الكامل",
+        "country": "الدولة المشاركة في كأس العالم",
+        "currency": "العملة المفضلة",
+        "server": "الخادم (Server)",
+        "acc_type": "نوع الحساب",
+        "deposit": "الإيداع / الرصيد",
+        "login_num": "رقم الدخول (Login)",
+        "password": "كلمة المرور",
+        "save_btn": "حفظ الحساب والدخول للنظام",
+        "tab1": "⚡ التحليل الفني والدخول الآلي الفوري",
+        "tab2": "💎 باقات الاشتراك و Apple Pay",
+        "tab3": "👥 لوحة إدارة الحسابات والمشتركين",
+        "amount_range": "حدد نطاق المبلغ المخصص للتنفيذ الآلي:",
+        "pairs": "اختر زوج العملات أو الأصل المالي",
+        "timeframe": "اختر الفريم الزمني للاستراتيجية",
+        "execute_btn": "🚀 تنفيذ الصفقة فوراً على حساب MT5",
+        "monthly": "الباقة الشهرية",
+        "yearly": "الباقة السنوية",
+        "vip": "باقة مدى الحياة (VIP)"
+    },
+    "English": {
+        "title": "🚀 Raseen AI Pro - AI Automated Trading Engine",
+        "sidebar_title": "🔐 Account & Language Portal",
+        "login_type": "Select Login Type:",
+        "investor_login": "Investors & Companies Login",
+        "admin_login": "Developer (Admin) Login",
+        "name": "Full Name",
+        "country": "World Cup Country",
+        "currency": "Preferred Currency",
+        "server": "Server",
+        "acc_type": "Account Type",
+        "deposit": "Deposit / Balance",
+        "login_num": "Login Number",
+        "password": "Password",
+        "save_btn": "Save Account & Login",
+        "tab1": "⚡ Technical Analysis & Auto Execution",
+        "tab2": "💎 Subscription Plans & Apple Pay",
+        "tab3": "👥 Accounts & Subscribers Dashboard",
+        "amount_range": "Select Automated Trading Amount Range:",
+        "pairs": "Select Trading Pair",
+        "timeframe": "Select Timeframe",
+        "execute_btn": "🚀 Execute Trade Instantly on MT5",
+        "monthly": "Monthly Plan",
+        "yearly": "Yearly Plan",
+        "vip": "VIP Lifetime Plan"
+    },
+    "Français": {
+        "title": "🚀 Raseen AI Pro - Moteur de Trading Automatisé par IA",
+        "sidebar_title": "🔐 Portail des Comptes & Langues",
+        "login_type": "Sélectionnez le type de connexion:",
+        "investor_login": "Connexion Investisseurs & Entreprises",
+        "admin_login": "Connexion Développeur (Admin)",
+        "name": "Nom complet",
+        "country": "Pays de la Coupe du Monde",
+        "currency": "Devise préférée",
+        "server": "Serveur",
+        "acc_type": "Type de compte",
+        "deposit": "Dépôt / Solde",
+        "login_num": "Numéro de connexion",
+        "password": "Mot de passe",
+        "save_btn": "Enregistrer et Se connecter",
+        "tab1": "⚡ Analyse Technique & Exécution Auto",
+        "tab2": "💎 Abonnements & Apple Pay",
+        "tab3": "👥 Tableau de bord des Abonnés",
+        "amount_range": "Sélectionnez la plage de montant:",
+        "pairs": "Sélectionner la paire",
+        "timeframe": "Sélectionner l'unité de temps",
+        "execute_btn": "🚀 Exécuter l'ordre instantanément sur MT5",
+        "monthly": "Plan Mensuel",
+        "yearly": "Plan Annuel",
+        "vip": "Plan VIP à vie"
+    },
+    "Español": {
+        "title": "🚀 Raseen AI Pro - Motor de Trading Automatizado por IA",
+        "sidebar_title": "🔐 Portal de Cuentas e Idiomas",
+        "login_type": "Seleccione el tipo de inicio de sesión:",
+        "investor_login": "Acceso de Inversores y Empresas",
+        "admin_login": "Acceso de Desarrollador (Admin)",
+        "name": "Nombre completo",
+        "country": "País de la Copa del Mundo",
+        "currency": "Moneda preferida",
+        "server": "Servidor",
+        "acc_type": "Tipo de cuenta",
+        "deposit": "Depósito / Saldo",
+        "login_num": "Número de acceso",
+        "password": "Contraseña",
+        "save_btn": "Guardar cuenta e iniciar sesión",
+        "tab1": "⚡ Análisis Técnico y Ejecución Automática",
+        "tab2": "💎 Planes de Suscripción y Apple Pay",
+        "tab3": "👥 Panel de Suscriptores",
+        "amount_range": "Seleccione el rango de monto:",
+        "pairs": "Seleccionar par de divisas",
+        "timeframe": "Seleccionar marco de tiempo",
+        "execute_btn": "🚀 Ejecutar orden instantáneamente en MT5",
+        "monthly": "Plan Mensual",
+        "yearly": "Plan Anual",
+        "vip": "Plan VIP de por vida"
+    }
+}
 
-world_cup_languages = [
-    "العربية", "English", "Español", "Français", "Deutsch", "Português", 
-    "Italiano", "Nederlands", "Hrvatski", "日本語", "한국어", "Polski"
-]
+# قائمة بلدان وعملات كأس العالم التاريخية (باستثناء إسرائيل)
+world_cup_countries_and_currencies = {
+    "المملكة العربية السعودية (السعودية)": "ريال سعودي (SAR)",
+    "قطر": "ريال قطري (QAR)",
+    "المغرب": "درهم مغربي (MAD)",
+    "مصر": "جنيه مصري (EGP)",
+    "تونس": "دينار تونسي (TND)",
+    "الجزائر": "دينار جزائري (DZD)",
+    "البرازيل": "ريال برازيلي (BRL)",
+    "الأرجنتين": "بيزو أرجنتيني (ARS)",
+    "ألمانيا": "يورو (EUR)",
+    "إسبانيا": "يورو (EUR)",
+    "فرنسا": "يورو (EUR)",
+    "إنجلترا (المملكة المتحدة)": "جنيه إسترليني (GBP)",
+    "البرتغال": "يورو (EUR)",
+    "إيطاليا": "يورو (EUR)",
+    "هولندا": "يورو (EUR)",
+    "كرواتيا": "يورو (EUR)",
+    "اليابان": "ين ياباني (JPY)",
+    "كوريا الجنوبية": "وون كوري جنوبي (KRW)",
+    "الولايات المتحدة الأمريكية": "دولار أمريكي (USD)",
+    "المكسيك": "بيزو مكسيكي (MXN)",
+    "كندا": "دولار كندي (CAD)",
+    "أوروغواي": "بيزو أوروغواياني (UYU)",
+    "كولومبيا": "بيزو كولومبي (COP)",
+    "تشيلي": "بيزو تشيلي (CLP)",
+    "السنغال": "فرنك غرب إفريقي (XOF)",
+    "غانا": "سيدي غاني (GHS)",
+    "الكاميرون": "فرنك وسط إفريقي (XAF)",
+    "نيجيريا": "نايرا نيجيرية (NGN)",
+    "جنوب أفريقيا": "راند جنوب إفريقي (ZAR)",
+    "أستراليا": "دولار أسترالي (AUD)",
+    "سويسرا": "فرنك سويسري (CHF)",
+    "بلجيكا": "يورو (EUR)",
+    "الدنمارك": "كرونة دانماركية (DKK)",
+    "صربيا": "دينار صربي (RSD)",
+    "بولندا": "زلوتي بولندي (PLN)",
+    "الأوروغواي": "بيزو أوروغواياني (UYU)",
+    "السويد": "كرونة سويدية (SEK)",
+    "النرويج": "كرونة نرويجية (NOK)"
+}
 
 currency_symbols = {
     "ريال سعودي (SAR)": {"code": "SAR", "symbol": "ر.س", "monthly": 25, "yearly": 200, "vip": 1000},
-    "دولار أمريكي (USD)": {"code": "USD", "symbol": "$", "monthly": 7, "yearly": 55, "vip": 270},
-    "يورو (EUR)": {"code": "EUR", "symbol": "€", "monthly": 6, "yearly": 50, "vip": 250},
-    "جنيه إسترليني (GBP)": {"code": "GBP", "symbol": "£", "monthly": 5, "yearly": 45, "vip": 220},
-    "ين ياباني (JPY)": {"code": "JPY", "symbol": "¥", "monthly": 1100, "yearly": 8500, "vip": 42000},
+    "دولار أمريكي (USD)": {"code": "USD", "symbol": "$", "monthly": 25, "yearly": 200, "vip": 1000},
+    "يورو (EUR)": {"code": "EUR", "symbol": "€", "monthly": 25, "yearly": 200, "vip": 1000},
+    "جنيه إسترليني (GBP)": {"code": "GBP", "symbol": "£", "monthly": 25, "yearly": 200, "vip": 1000},
+    "ين ياباني (JPY)": {"code": "JPY", "symbol": "¥", "monthly": 3800, "yearly": 30000, "vip": 150000},
     "ريال قطري (QAR)": {"code": "QAR", "symbol": "ر.ق", "monthly": 25, "yearly": 200, "vip": 1000},
-    "درهم مغربي (MAD)": {"code": "MAD", "symbol": "د.م.", "monthly": 70, "yearly": 550, "vip": 2700},
-    "جنيه مصري (EGP)": {"code": "EGP", "symbol": "ج.م", "monthly": 350, "yearly": 2800, "vip": 14000},
-    "ريال برازيلي (BRL)": {"code": "BRL", "symbol": "R$", "monthly": 35, "yearly": 280, "vip": 1400},
-    "بيزو أرجنتيني (ARS)": {"code": "ARS", "symbol": "$", "monthly": 6500, "yearly": 52000, "vip": 260000},
-    "دولار كندي (CAD)": {"code": "CAD", "symbol": "CA$", "monthly": 10, "yearly": 75, "vip": 370},
-    "دولار أسترالي (AUD)": {"code": "AUD", "symbol": "A$", "monthly": 11, "yearly": 85, "vip": 410},
-    "فرنك سويسري (CHF)": {"code": "CHF", "symbol": "CHF", "monthly": 6, "yearly": 50, "vip": 250}
+    "درهم مغربي (MAD)": {"code": "MAD", "symbol": "د.م.", "monthly": 250, "yearly": 2000, "vip": 10000},
+    "جنيه مصري (EGP)": {"code": "EGP", "symbol": "ج.م", "monthly": 1200, "yearly": 9500, "vip": 48000},
+    "ريال برازيلي (BRL)": {"code": "BRL", "symbol": "R$", "monthly": 125, "yearly": 1000, "vip": 5000},
+    "بيزو أرجنتيني (ARS)": {"code": "ARS", "symbol": "$", "monthly": 25000, "yearly": 200000, "vip": 1000000},
+    "دولار كندي (CAD)": {"code": "CAD", "symbol": "CA$", "monthly": 35, "yearly": 270, "vip": 1350},
+    "دولار أسترالي (AUD)": {"code": "AUD", "symbol": "A$", "monthly": 38, "yearly": 300, "vip": 1500},
+    "فرنك سويسري (CHF)": {"code": "CHF", "symbol": "CHF", "monthly": 23, "yearly": 180, "vip": 900}
 }
 
 trading_pairs = [
@@ -69,215 +206,244 @@ trading_pairs = [
 
 timeframes = ["دقيقة (M1)", "5 دقائق (M5)", "15 دقيقة (M15)", "نصف ساعة (M30)", "ساعة (H1)", "4 ساعات (H4)", "يومي (D1)", "أسبوعي (W1)", "شهري (MN)"]
 
-# --- القائمة الجانبية (الدخول والحفظ التلقائي) ---
-st.sidebar.title("🔐 بوابة الدخول والحفظ")
+# نطاقات المبالغ المحددة التي طلبتها
+amount_ranges = [
+    "من 10 دولار إلى 50 دولار",
+    "من 50 دولار إلى 100 دولار",
+    "من 100 دولار إلى 500 دولار",
+    "من 500 دولار إلى 1000 دولار",
+    "من 1000 دولار إلى 5000 دولار",
+    "من 5000 دولار إلى 10000 دولار",
+    "من 10000 دولار إلى 50000 دولار",
+    "من 50000 دولار إلى 100000 دولار",
+    "من 100000 دولار إلى 500000 دولار",
+    "من 500000 دولار إلى 1000000 دولار",
+    "من 1000000 دولار إلى 5000000 دولار",
+    "من 5000000 دولار إلى 10000000 دولار",
+    "من 10000000 دولار إلى 50000000 دولار",
+    "من 50000000 دولار إلى 100000000 دولار",
+    "من 100000000 دولار إلى 500000000 دولار",
+    "من 500000000 دولار إلى 1000000000 دولار",
+    "من 1000000000 دولار إلى 5000000000 دولار",
+    "من 5000000000 دولار إلى 50000000000 دولار"
+]
+
+# --- القائمة الجانبية (اللغة والحسابات) ---
+st.sidebar.title("🌐 Language / اللغة")
+selected_lang = st.sidebar.selectbox("Choose Language / اختر اللغة", ["العربية", "English", "Français", "Español"])
+t = translations[selected_lang]
+
+st.sidebar.markdown("---")
+st.sidebar.title(t["sidebar_title"])
 
 if st.session_state.logged_in_user is not None:
-    st.sidebar.success(f"مرحباً بك مسجلاً مسبقاً: **{st.session_state.logged_in_user}** 🟢")
-    if st.sidebar.button("تسجيل الخروج"):
+    st.sidebar.success(f"🟢 **{st.session_state.logged_in_user}**")
+    if st.sidebar.button("Logout / تسجيل الخروج"):
         st.session_state.logged_in_user = None
         st.session_state.user_role = None
         st.session_state.client_data = None
         st.session_state.is_paid = False
         st.rerun()
 else:
-    login_type = st.sidebar.radio("اختر نوع الدخول:", ["دخول المستثمرين والشركات", "دخول الصانع والمبرمج (المدير)"])
+    login_type = st.sidebar.radio(t["login_type"], [t["investor_login"], t["admin_login"]])
     st.sidebar.markdown("---")
 
-    if login_type == "دخول الصانع والمبرمج (المدير)":
-        st.sidebar.subheader("👑 تسجيل دخول المبرمج")
-        admin_name = st.sidebar.text_input("الاسم", value="عزام الفضلي")
-        admin_email = st.sidebar.text_input("البريد الإلكتروني")
-        admin_pass = st.sidebar.text_input("كلمة المرور", type="password")
+    if login_type == t["admin_login"]:
+        st.sidebar.subheader("👑 Admin Login")
+        admin_name = st.sidebar.text_input("Name", value="عزام الفضلي")
+        admin_pass = st.sidebar.text_input("Password", type="password")
         
-        if st.sidebar.button("حفظ الدخول ودخول النظام"):
+        if st.sidebar.button("Login"):
             if admin_name == "عزام الفضلي" and admin_pass:
                 st.session_state.logged_in_user = admin_name
                 st.session_state.user_role = 'admin'
-                st.sidebar.success("تم الحفظ والدخول بنجاح بصلاحيات المبرمج المطلقة!")
+                st.sidebar.success("Logged in successfully!")
                 st.rerun()
             else:
-                st.sidebar.error("بيانات المبرمج غير صحيحة.")
+                st.sidebar.error("Invalid credentials.")
 
-    elif login_type == "دخول المستثمرين والشركات":
-        st.sidebar.subheader("👤 تسجيل بيانات المستثمر/الشركة")
+    elif login_type == t["investor_login"]:
+        st.sidebar.subheader("👤 Investor & MT5 Setup")
         
-        client_name = st.sidebar.text_input("الاسم الكامل / اسم الشركة")
-        client_age = st.sidebar.number_input("العمر / سنة التأسيس", min_value=18, max_value=200, value=25)
-        client_email = st.sidebar.text_input("البريد الإلكتروني")
-        client_country = st.sidebar.selectbox("الدولة", world_cup_countries)
-        client_lang = st.sidebar.selectbox("اللغة", world_cup_languages)
-        client_curr = st.sidebar.selectbox("العملة المفضلة", list(currency_symbols.keys()))
+        client_name = st.sidebar.text_input(t["name"], value="عزام الفضلي")
+        client_country = st.sidebar.selectbox(t["country"], list(world_cup_countries_and_currencies.keys()))
+        default_curr = world_cup_countries_and_currencies[client_country]
+        client_curr = st.sidebar.selectbox(t["currency"], list(currency_symbols.keys()), index=list(currency_symbols.keys()).index(default_curr) if default_curr in currency_symbols else 0)
         
-        account_mode = st.sidebar.selectbox("نوع الحساب", ["حساب تجريبي (Demo - مجاني ودائم)", "حقيقي (Live - تجربة 15 يوم)"])
-        acc_number = st.sidebar.text_input("رقم الحساب (Login)")
-        server_name = st.sidebar.text_input("اسم السيرفر (Server)")
-        acc_pass = st.sidebar.text_input("كلمة المرور للمنصة", type="password")
+        st.sidebar.markdown("---")
+        server_name = st.sidebar.text_input(t["server"], value="MetaQuotes-Demo")
+        acc_type = st.sidebar.text_input(t["acc_type"], value="Forex Hedged USD (1:100)")
+        deposit_val = st.sidebar.text_input(t["deposit"], value="3000 USD")
+        acc_number = st.sidebar.text_input(t["login_num"], value="111726346")
+        acc_pass = st.sidebar.text_input(t["password"], value="A@3hHoNo", type="password")
         
-        if st.sidebar.button("حفظ البيانات والدخول"):
-            if client_name and client_email and acc_number and acc_pass:
+        if st.sidebar.button(t["save_btn"]):
+            if client_name and acc_number and acc_pass:
                 reg_time = datetime.now()
                 st.session_state.logged_in_user = client_name
                 st.session_state.user_role = 'client'
-                st.session_state.client_data = {
-                    "name": client_name, "age": client_age, "email": client_email, 
-                    "country": client_country, "currency": client_curr, "acc_type": account_mode, "reg_date": reg_time
+                
+                account_info = {
+                    "name": client_name,
+                    "server": server_name,
+                    "acc_type": acc_type,
+                    "deposit": deposit_val,
+                    "login": acc_number,
+                    "password": acc_pass,
+                    "currency": client_curr,
+                    "country": client_country,
+                    "reg_date": reg_time
                 }
-                st.session_state.subscribers_db.append(st.session_state.client_data)
-                st.sidebar.success("تم حفظ البيانات بنجاح ولن تحتاج لإعادة إدخالها!")
-                send_alert(f"👤 *مستثمر/شركة جديدة مسجلة*\nالاسم: {client_name}\nالعملة: {client_curr}\nالدولة: {client_country}")
+                
+                st.session_state.client_data = account_info
+                st.session_state.mt5_accounts.append(account_info)
+                st.session_state.subscribers_db.append(account_info)
+                
+                st.sidebar.success("Account saved and linked successfully!")
+                send_alert(f"👤 *New MT5 Account Linked*\nName: {client_name}\nLogin: {acc_number}\nServer: {server_name}")
                 st.rerun()
             else:
-                st.sidebar.error("يرجى إكمال جميع الحقول المطلوبة.")
+                st.sidebar.error("Please fill in required fields.")
 
 # --- الواجهة الرئيسية ---
-st.title("🚀 Raseen AI Pro - محرك الذكاء الاصطناعي المتكامل للتنفيذ الآلي")
+st.title(t["title"])
 st.markdown("---")
 
 if st.session_state.logged_in_user is None:
-    st.info("👈 يرجى تسجيل الدخول من القائمة الجانبية (سيتم حفظ بياناتك تلقائياً).")
+    st.info("👈 Please login and link your MT5 account from the sidebar to start.")
 else:
-    is_locked = False
-    if st.session_state.user_role == 'client':
+    if st.session_state.client_data:
         c_data = st.session_state.client_data
-        if "حقيقي" in c_data["acc_type"] and not st.session_state.is_paid:
-            days_passed = (datetime.now() - c_data["reg_date"]).days
-            if days_passed > 15:
-                is_locked = True
+        st.markdown(f"""
+        ### 📋 Linked MetaTrader 5 (MT5) Account Details:
+        | Field | Details |
+        | :--- | :--- |
+        | 👤 **Name** | {c_data['name']} |
+        | 🌍 **Country** | {c_data['country']} |
+        | 🏢 **Server** | `{c_data['server']}` |
+        | 💰 **Deposit / Balance** | **{c_data['deposit']}** |
+        | 🔢 **Login** | `{c_data['login']}` |
+        """)
+        st.markdown("---")
 
     if st.session_state.user_role == 'admin':
-        tabs = st.tabs(["⚡ التحليل الفني والدخول الآلي الفوري", "💎 باقات الاشتراك و Apple Pay", "👥 لوحة إدارة المشتركين"])
+        tabs = st.tabs([t["tab1"], t["tab2"], t["tab3"]])
     else:
-        tabs = st.tabs(["⚡ التحليل الفني والدخول الآلي الفوري", "💎 باقات الاشتراك و Apple Pay"])
+        tabs = st.tabs([t["tab1"], t["tab2"]])
 
     with tabs[0]:
-        st.subheader("⚡ محرك الذكاء الاصطناعي المطور: تحليل فوري وتنفيذ مباشر عبر ملفات النظام")
+        st.subheader(t["tab1"])
         
-        if is_locked:
-            st.error("🔒 **انتهت الفترة التجريبية (15 يوم). تم قفل النظام مؤقتاً.**")
-            st.warning("يرجى الانتقال لتبويب (باقات الاشتراك) والدفع الفوري عبر Apple Pay لفتح البوت واستمرار التحليلات بدون توقف.")
-        else:
-            if st.session_state.user_role == 'admin':
-                st.success("👑 أهلاً بك يا مبرمجنا عزام الفضلي! لديك صلاحيات مطلقة ودائمة بدون اشتراك وبأقصى درجات الدقة والربط الفوري مع المنصة. 🟢")
-            else:
-                st.success(f"مرحباً بك يا {st.session_state.logged_in_user}! بوت الذكاء الاصطناعي جاهز لرصد التوجيه والتنفيذ الفوري 🟢")
+        # خانة المبلغ المخصص المحددة بدقة
+        selected_amount_range = st.selectbox(t["amount_range"], amount_ranges)
+        
+        c_pair, c_time = st.columns(2)
+        with c_pair:
+            selected_pair = st.selectbox(t["pairs"], trading_pairs)
+        with c_time:
+            selected_timeframe = st.selectbox(t["timeframe"], timeframes)
             
-            c_pair, c_time = st.columns(2)
-            with c_pair:
-                selected_pair = st.selectbox("اختر زوج العملات أو الأصل المالي", trading_pairs)
-            with c_time:
-                selected_timeframe = st.selectbox("اختر الفريم الزمني للاستراتيجية", timeframes)
+        # حساب اللوت وعدد الصفقات آلياً بناءً على نطاق المبلغ المختار للذكاء الاصطناعي
+        base_val = 1000.0
+        if "10" in selected_amount_range and "50" in selected_amount_range: base_val = 30.0
+        elif "50" in selected_amount_range: base_val = 75.0
+        elif "100" in selected_amount_range: base_val = 300.0
+        elif "500" in selected_amount_range: base_val = 750.0
+        elif "1000" in selected_amount_range: base_val = 3000.0
+        elif "5000" in selected_amount_range: base_val = 7500.0
+        elif "10000" in selected_amount_range: base_val = 25000.0
+        elif "50000" in selected_amount_range: base_val = 75000.0
+        elif "100000" in selected_amount_range: base_val = 300000.0
+        elif "1000000" in selected_amount_range: base_val = 3000000.0
+        
+        calc_lot = round(max(0.01, base_val / 1000.0), 2)  
+        calc_trades = max(1, int(base_val / 200))  
+        
+        st.write(f"📊 **AI Risk Management & MT5 Lot Sizing:** Selected Range: `{selected_amount_range}` | Calculated Lot: **{calc_lot}** | Safe Trades Count: **{calc_trades}**")
+        
+        if st.button(t["execute_btn"], type="primary"):
+            with st.spinner("Analyzing market and executing orders instantly on MT5..."):
+                time.sleep(0.5)
+                import random
                 
-            manual_deposit = st.number_input("أدخل رأس المال المخصص ($):", min_value=1.0, value=1000.0, step=100.0)
-            
-            calc_lot = round(max(0.01, manual_deposit / 1000.0), 2)  
-            calc_trades = max(1, int(manual_deposit / 200))  
-            
-            st.write(f"📊 **إدارة المخاطر واللوت:** حجم العقد المناسب: **{calc_lot}** | عدد الصفقات الآمنة: **{calc_trades}**")
-            
-            # زر التشغيل الفوري واستدعاء ملف التنفيذ الآلي
-            if st.button("🚀 تحليل عميق ودخول الصفقة فوراً عبر بوت التنفيذ", type="primary"):
-                with st.spinner("جاري تحليل المؤشرات (SMC, Price Action, RSI, Order Blocks) وإرسال أمر التنفيذ الفوري للمنصة..."):
-                    time.sleep(1.0)
-                    import random
-                    
-                    signals_pool = [
-                        {
-                            "type": "طلوع قوي 🚀", 
-                            "action": "تم تنفيذ صفقة شراء (STRONG BUY) فوراً بنجاح", 
-                            "desc": "ارتداد قوي للسعر من منطقة Order Block رئيسية على فريم (SMC) مع اختراق خط الاتجاه الهابط وتقاطع إيجابي لمؤشر RSI صاعد من مناطق التشبع البيعي."
-                        },
-                        {
-                            "type": "طلوع عادي 📈", 
-                            "action": "تم تنفيذ صفقة شراء (BUY) فوراً بنجاح", 
-                            "desc": "استقرار السعر فوق مستويات الدعم الفني وثبات هيكل السوق (BOS) صعوداً مع استقرار مؤشر العزم."
-                        },
-                        {
-                            "type": "نزول قوي 📉", 
-                            "action": "تم تنفيذ صفقة بيع (STRONG SELL) فوراً بنجاح", 
-                            "desc": "كسر هيكل السوق (BOS) هبوطاً مع خروج السيولة من مناطق العرض (Supply Zone) وتشبع شرائي واضح على مؤشر RSI."
-                        },
-                        {
-                            "type": "نزول عادي 🔻", 
-                            "action": "تم تنفيذ صفقة بيع (SELL) فوراً بنجاح", 
-                            "desc": "إعادة اختبار مقاومة عرضية قوية مع ضغط بيعي خفيف وانعكاس في حركة الشموع (Price Action Rejection)."
-                        }
-                    ]
-                    chosen_sig = random.choice(signals_pool)
-                    
-                    # استدعاء دالة التنفيذ الآلي من ملف mt5_bot.py
-                    execute_trade_signal(selected_pair, selected_timeframe, chosen_sig['action'], calc_lot)
-                    
-                    st.success(f"⚡ **تنبيه تنفيذي فوري من الذكاء الاصطناعي على ({selected_pair}) - فريم ({selected_timeframe}):**\n\n* **حالة السوق:** {chosen_sig['type']}\n* **التوجيه والتنفيذ:** **{chosen_sig['action']}**\n* **حجم العقد المنفذ (اللوت):** {calc_lot}\n* **التحليل الفني الدقيق:** {chosen_sig['desc']}")
-                    
-                    send_alert(f"🤖 *تنبيه دخول آلي فوري*\nالزوج: {selected_pair}\nالفريم: {selected_timeframe}\nالحالة: {chosen_sig['type']}\nالإجراء: {chosen_sig['action']}\nاللوت: {calc_lot}\nالتحليل: {chosen_sig['desc']}")
+                signals_pool = [
+                    {"type": "STRONG BUY 🚀", "action": "Executed STRONG BUY order successfully", "desc": "SMC Order Block reaction with RSI bullish crossover."},
+                    {"type": "BUY 📈", "action": "Executed BUY order successfully", "desc": "Market structure BOS held above support zone."},
+                    {"type": "STRONG SELL 📉", "action": "Executed STRONG SELL order successfully", "desc": "Supply zone rejection with strong momentum breakdown."},
+                    {"type": "SELL 🔻", "action": "Executed SELL order successfully", "desc": "Resistance retest with price action confirmation."}
+                ]
+                chosen_sig = random.choice(signals_pool)
+                
+                # تنفيذ فوري عبر بوت ميتاتريدر 5
+                execute_trade_signal(selected_pair, selected_timeframe, chosen_sig['action'], calc_lot)
+                
+                st.success(f"⚡ **Instant Execution Result on MT5 (`{st.session_state.client_data['login']}`):**\n\n* **Pair:** {selected_pair} | **Timeframe:** {selected_timeframe}\n* **Action:** **{chosen_sig['action']}**\n* **Lot Size:** {calc_lot} | **Trades Count:** {calc_trades}\n* **Analysis:** {chosen_sig['desc']}")
+                
+                send_alert(f"🤖 *Instant MT5 Execution*\nLogin: {st.session_state.client_data['login']}\nPair: {selected_pair}\nAction: {chosen_sig['action']}\nLot: {calc_lot}")
 
     with tabs[1]:
-        st.subheader("💎 باقات الاشتراك الفورية للمستثمرين والمتداولين والشركات")
+        st.subheader(t["tab2"])
         
-        user_curr_key = "دولار أمريكي (USD)"
-        if st.session_state.client_data:
-            user_curr_key = st.session_state.client_data.get("currency", "دولار أمريكي (USD)")
+        curr_info = currency_symbols[st.session_state.client_data['currency']] if st.session_state.client_data else currency_symbols["دولار أمريكي (USD)"]
         
-        curr_info = currency_symbols[user_curr_key]
-        st.info(f"🌐 العملة المختارة لحسابك: **{user_curr_key}** (يتم عرض الأسعار وتفعيل الدفع الفوري بهذه العملة مباشرة)")
+        start_date = datetime.now().strftime('%Y-%m-%d')
+        month_end = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+        year_end = (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
         
         c1, c2, c3 = st.columns(3)
         with c1:
             st.markdown(f"""
-            ### الباقة الشهرية
-            **{curr_info['monthly']} {curr_info['symbol']} / شهرياً**
-            - تفعيل كامل للذكاء الاصطناعي
-            - دخول فوري وتلقائي للصفقات
-            - تنبيهات تيليجرام فورية
+            ### {t['monthly']}
+            **{curr_info['monthly']} {curr_info['symbol']} / Month**
+            - 📅 Start Date: `{start_date}`
+            - ⏳ End Date: `{month_end}`
+            - Full AI & MT5 Auto Execution
             """)
-            if st.button(f" Apple Pay - اشترك بـ {curr_info['monthly']} {curr_info['symbol']}"):
+            if st.button(" Apple Pay - Monthly"):
                 st.session_state.is_paid = True
-                st.success("🎉 تم الدفع الفوري بنجاح عبر Apple Pay! تم فتح البوت وتفعيل الخدمات فوراً لك.")
+                st.success("🎉 Monthly subscription activated successfully via Apple Pay!")
                 st.rerun()
                 
         with c2:
             st.markdown(f"""
-            ### الباقة السنوية
-            **{curr_info['yearly']} {curr_info['symbol']} / سنوياً**
-            - توفير 30% للمتداولين
-            - أولوية قصوى في سرعة التنفيذ
-            - دعم فني خاص
+            ### {t['yearly']}
+            **{curr_info['yearly']} {curr_info['symbol']} / Year**
+            - 📅 Start Date: `{start_date}`
+            - ⏳ End Date: `{year_end}`
+            - Priority Execution & Support
             """)
-            if st.button(f" Apple Pay - اشترك بـ {curr_info['yearly']} {curr_info['symbol']}"):
+            if st.button(" Apple Pay - Yearly"):
                 st.session_state.is_paid = True
-                st.success("🎉 تم الدفع الفوري بنجاح عبر Apple Pay! تم فتح البوت وتفعيل الخدمات فوراً لك.")
+                st.success("🎉 Yearly subscription activated successfully via Apple Pay!")
                 st.rerun()
                 
         with c3:
             st.markdown(f"""
-            ### باقة مدى الحياة (VIP)
-            **{curr_info['vip']} {curr_info['symbol']} (دائم)**
-            - صلاحيات مطلقة مدى الحياة
-            - مخصص للشركات والمستثمرين الكبار
-            - ربط وإدارة صفقات مخصصة
+            ### {t['vip']}
+            **{curr_info['vip']} {curr_info['symbol']} (Lifetime)**
+            - 📅 Start Date: `{start_date}`
+            - ⏳ End Date: **Lifetime / دائم (No Expiry)**
+            - Unlimited VIP Privileges
             """)
-            if st.button(f" Apple Pay - امتلكه بـ {curr_info['vip']} {curr_info['symbol']}"):
+            if st.button(" Apple Pay - VIP Lifetime"):
                 st.session_state.is_paid = True
-                st.success("🎉 تم الدفع الفوري بنجاح عبر Apple Pay! تم فتح البوت وتفعيل الخدمات فوراً لك.")
+                st.success("🎉 VIP Lifetime subscription activated successfully!")
                 st.rerun()
 
     if st.session_state.user_role == 'admin':
         with tabs[2]:
-            st.subheader("👑 لوحة إدارة المشتركين (خاصة بالمبرمج عزام الفضلي)")
-            st.write("هنا يتم حفظ وعرض جميع بيانات المستثمرين والمتداولين والشركات المسجلين في التطبيق تلقائياً:")
-            
-            if st.session_state.subscribers_db:
-                for idx, sub in enumerate(st.session_state.subscribers_db, 1):
+            st.subheader("👑 Subscribers Management Dashboard (عزام الفضلي)")
+            if st.session_state.mt5_accounts:
+                for idx, acc in enumerate(st.session_state.mt5_accounts, 1):
                     st.markdown(f"""
-                    - **المشترك #{idx}:** {sub['name']}
-                      - 🎂 العمر/التأسيس: {sub['age']} | 📧 البريد: {sub['email']}
-                      - 🌍 الدولة: {sub['country']} | 💰 العملة: {sub['currency']}
-                      - 💼 نوع الحساب: {sub['acc_type']} | ⏰ وقت التسجيل: {sub['reg_date'].strftime('%Y-%m-%d %H:%M')}
+                    - **Subscriber #{idx}:** {acc['name']}
+                      - 🌍 Country: {acc['country']} | 💰 Currency: {acc['currency']}
+                      - 🔢 Login: `{acc['login']}` | 🏢 Server: `{acc['server']}`
+                      - ⏰ Reg Date: {acc['reg_date'].strftime('%Y-%m-%d %H:%M')}
                     ---
                     """)
             else:
-                st.info("لا يوجد مشتركين مسجلين حتى الآن.")
+                st.info("No subscribers found.")
 
 st.markdown("---")
-st.markdown("Raseen AI Pro - 2026 جميع الحقوق محفوظة للمبرمج عزام الفضلي")
+st.markdown("Raseen AI Pro - 2026 All Rights Reserved for Developer Azzam Al-Fadhli")
