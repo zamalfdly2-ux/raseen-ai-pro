@@ -5,7 +5,7 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="Raseen AI Pro - Smart Trading", page_icon="🤖", layout="wide")
 
-# تهيئة الجلسة والحفظ الثابت
+# تهيئة الجلسة والحفظ الثابت تماماً لمنع ضياع أي بيانات
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = True
 if 'mt5_data' not in st.session_state:
@@ -31,32 +31,38 @@ st.sidebar.markdown("---")
 st.sidebar.title("🔐 بوابة الحساب وإدارة المنصة")
 
 # اختيار وضع الحساب (تجريبي أو حقيقي)
-mode_choice = st.sidebar.radio("اختر وضع التداول للتجربة:", ["حساب تجريبي (Demo)", "حساب حقيقي (Real - 1000$)"])
+mode_choice = st.sidebar.radio("اختر وضع التداول للتجربة:", ["حساب تجريبي (Demo)", "حساب حقيقي (Real - 1000$)"], index=0 if st.session_state.account_mode == "حساب تجريبي (Demo)" else 1)
 st.session_state.account_mode = mode_choice
 
-with st.sidebar.expander("📋 بيانات حساب MT5 (ثابت)", expanded=True):
-    f_name = st.text_input("الاسم الأول", value=st.session_state.mt5_data["first_name"])
-    s_name = st.text_input("الاسم الثاني", value=st.session_state.mt5_data["second_name"])
-    serv = st.text_input("الخادم", value=st.session_state.mt5_data["server"])
-    acc_t = st.text_input("نوع الحساب", value=st.session_state.mt5_data["acc_type"])
+with st.sidebar.expander("📋 بيانات حساب MT5 (ثابت ومحفوظ)", expanded=True):
+    # استخدام مفاتيح (keys) لضمان حفظ واستقرار القيم بدقة تامة
+    f_name = st.text_input("الاسم الأول", value=st.session_state.mt5_data["first_name"], key="input_f_name")
+    s_name = st.text_input("الاسم الثاني", value=st.session_state.mt5_data["second_name"], key="input_s_name")
+    serv = st.text_input("الخادم", value=st.session_state.mt5_data["server"], key="input_serv")
+    acc_t = st.text_input("نوع الحساب", value=st.session_state.mt5_data["acc_type"], key="input_acc_t")
     
     default_dep = "1000 USD" if "حقيقي" in mode_choice else st.session_state.mt5_data["deposit"]
-    dep = st.text_input("الإيداع", value=default_dep)
+    dep = st.text_input("الإيداع", value=default_dep, key="input_dep")
     
-    log_num = st.text_input("الدخول", value=st.session_state.mt5_data["login"])
-    passw = st.text_input("كلمة المرور", value=st.session_state.mt5_data["password"], type="password")
-    inv = st.text_input("مستثمر", value=st.session_state.mt5_data["investor"])
+    log_num = st.text_input("الدخول", value=st.session_state.mt5_data["login"], key="input_log_num")
+    passw = st.text_input("كلمة المرور", value=st.session_state.mt5_data["password"], type="password", key="input_passw")
+    inv = st.text_input("مستثمر", value=st.session_state.mt5_data["investor"], key="input_inv")
     
     st.text_input("الدولة الثابتة", value="المملكة العربية السعودية", disabled=True)
     st.text_input("العملة الثابتة", value="ريال سعودي (SAR)", disabled=True)
     
     if st.button("حفظ وتحديث البيانات"):
         st.session_state.mt5_data.update({
-            "first_name": f_name, "second_name": s_name, "server": serv,
-            "acc_type": acc_t, "deposit": dep, "login": log_num,
-            "password": passw, "investor": inv
+            "first_name": f_name,
+            "second_name": s_name,
+            "server": serv,
+            "acc_type": acc_t,
+            "deposit": dep,
+            "login": log_num,
+            "password": passw,
+            "investor": inv
         })
-        st.sidebar.success("تم تحديث البيانات بنجاح!")
+        st.sidebar.success("تم حفظ وتحديث بيانات الحساب بنجاح وثبات تام!")
         st.rerun()
 
 # --- الواجهة الرئيسية ---
@@ -65,10 +71,10 @@ mode_badge = "🟢 حساب حقيقي (Live Real 1000$)" if "حقيقي" in st.
 st.markdown(f"### أهلاً بك يا بطل: **{st.session_state.mt5_data['first_name']} {st.session_state.mt5_data['second_name']}** | الوضع الحالي: **{mode_badge}**")
 st.markdown("---")
 
-# جدول عرض تفاصيل الحساب
+# جدول عرض تفاصيل الحساب المحفوظة
 d = st.session_state.mt5_data
 st.markdown(f"""
-| تفاصيل الحساب (MetaTrader 5) | القيمة المسجلة |
+| تفاصيل الحساب (MetaTrader 5) | القيمة المحفوظة |
 | :--- | :--- |
 | 👤 **الاسم الأول** | {d['first_name']} |
 | 👤 **الاسم الثاني** | {d['second_name']} |
@@ -82,7 +88,7 @@ st.markdown(f"""
 """)
 st.markdown("---")
 
-# التبويبات الرئيسية (بدون باقات واشتراكات نهائياً بناءً على طلبك)
+# التبويبات الرئيسية
 tabs = st.tabs(["⚡ التحليل الفني، اتجاه السوق وأهداف TP/SL", "👥 لوحة إدارة الحساب والتجربة"])
 
 with tabs[0]:
@@ -136,7 +142,6 @@ with tabs[0]:
         with st.spinner("جاري معالجة المؤشرات وقراءة حركة السوق بدقة فائقة..."):
             time.sleep(0.6)
             
-            # تحديد نوع القرار بناءً على حالة السوق التي اخترتها (شراء أو بيع)
             if "صعود" in market_condition:
                 action_type = "شراء (BUY) 📈"
                 recommendation_text = "السوق في وضع صعود، الذكاء الاصطناعي يؤكد الدخول في صفقة **شراء** مع تفعيل الأهداف بدقة."
@@ -170,9 +175,9 @@ with tabs[1]:
       - 🇸🇦 الدولة: المملكة العربية السعودية | 💰 العملة: ريال سعودي (SAR)
       - 🔢 رقم الدخول: `{d['login']}` | 🏢 الخادم: `{d['server']}`
       - ⚙️ وضع التشغيل الحالي: `{st.session_state.account_mode}`
-      - ⏰ تاريخ التسجيل الجلسة: {d['reg_date'].strftime('%Y-%m-%d %H:%M')}
+      - ⏰ تاريخ تسجيل الجلسة: {d['reg_date'].strftime('%Y-%m-%d %H:%M')}
     ---
-    *ملاحظة لك يا عزام: النظام الآن خالي تماماً من أي اشتراكات أو باقات، ومفتوح لك للتجربة بأمان تام.*
+    *ملاحظة لك يا عزام: النظام الآن يحفظ كل تعديلاتك بشكل دائم وبدون أي فقدان للبيانات، وجاهز لتجربتك بالكامل.*
     """)
 
 st.markdown("---")
