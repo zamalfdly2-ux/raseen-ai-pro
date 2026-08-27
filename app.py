@@ -14,7 +14,7 @@ if 'mt5_data' not in st.session_state:
         "second_name": "الهذلي",
         "server": "MetaQuotes-Demo",
         "acc_type": "Forex Hedged USD (1:100)",
-        "deposit": "1000 USD",
+        "deposit": "1000",
         "login": "111726346",
         "password": "A@3hHoNo",
         "investor": "Ir_4UmSt",
@@ -35,14 +35,12 @@ mode_choice = st.sidebar.radio("اختر وضع التداول للتجربة:",
 st.session_state.account_mode = mode_choice
 
 with st.sidebar.expander("📋 بيانات حساب MT5 (ثابت ومحفوظ)", expanded=True):
-    # استخدام مفاتيح (keys) لضمان حفظ واستقرار القيم بدقة تامة
     f_name = st.text_input("الاسم الأول", value=st.session_state.mt5_data["first_name"], key="input_f_name")
     s_name = st.text_input("الاسم الثاني", value=st.session_state.mt5_data["second_name"], key="input_s_name")
     serv = st.text_input("الخادم", value=st.session_state.mt5_data["server"], key="input_serv")
     acc_t = st.text_input("نوع الحساب", value=st.session_state.mt5_data["acc_type"], key="input_acc_t")
     
-    default_dep = "1000 USD" if "حقيقي" in mode_choice else st.session_state.mt5_data["deposit"]
-    dep = st.text_input("الإيداع", value=default_dep, key="input_dep")
+    dep = st.text_input("الإيداع الأساسي", value=st.session_state.mt5_data["deposit"], key="input_dep")
     
     log_num = st.text_input("الدخول", value=st.session_state.mt5_data["login"], key="input_log_num")
     passw = st.text_input("كلمة المرور", value=st.session_state.mt5_data["password"], type="password", key="input_passw")
@@ -51,7 +49,7 @@ with st.sidebar.expander("📋 بيانات حساب MT5 (ثابت ومحفوظ)
     st.text_input("الدولة الثابتة", value="المملكة العربية السعودية", disabled=True)
     st.text_input("العملة الثابتة", value="ريال سعودي (SAR)", disabled=True)
     
-    if st.button("حفظ وتحديث البيانات"):
+    if st.button("حفظ وتحديث بيانات الحساب"):
         st.session_state.mt5_data.update({
             "first_name": f_name,
             "second_name": s_name,
@@ -62,7 +60,7 @@ with st.sidebar.expander("📋 بيانات حساب MT5 (ثابت ومحفوظ)
             "password": passw,
             "investor": inv
         })
-        st.sidebar.success("تم حفظ وتحديث بيانات الحساب بنجاح وثبات تام!")
+        st.sidebar.success("تم حفظ وتحديث البيانات بنجاح وثبات تام!")
         st.rerun()
 
 # --- الواجهة الرئيسية ---
@@ -80,7 +78,7 @@ st.markdown(f"""
 | 👤 **الاسم الثاني** | {d['second_name']} |
 | 🏢 **الخادم** | `{d['server']}` |
 | ⚙️ **نوع الحساب** | {d['acc_type']} |
-| 💰 **رأس المال / الإيداع** | **{d['deposit']}** |
+| 💰 **رأس المال الأساسي** | **{d['deposit']} USD** |
 | 🔢 **رقم الدخول** | `{d['login']}` |
 | 🔑 **كلمة المرور** | `********` |
 | 👁️ **مستثمر** | `{d['investor']}` |
@@ -92,12 +90,16 @@ st.markdown("---")
 tabs = st.tabs(["⚡ التحليل الفني، اتجاه السوق وأهداف TP/SL", "👥 لوحة إدارة الحساب والتجربة"])
 
 with tabs[0]:
-    st.subheader("⚡ محرك الذكاء الاصطناعي لتحليل السوق (صعود/نزول) والأهداف الدقيقة")
+    st.subheader("⚡ محرك الذكاء الاصطناعي لتحليل السوق وإدارة المخاطر واللوت الآلي")
     
-    selected_range = st.selectbox("حدد رأس المال المستهدف للتنفيذ:", [
-        "1000 دولار (حسابك الأساسي)", "من 10 إلى 50 دولار", "من 50 إلى 100 دولار", 
-        "من 100 إلى 500 دولار", "من 500 إلى 1000 دولار", "من 1000 إلى 5000 دولار", "من 5000 إلى 10000 دولار"
-    ])
+    # خانة الإيداع المخصصة المطلوبة (أي مبلغ تحطه يحسب لك اللوت والصفقات تلقائياً)
+    user_custom_deposit = st.number_input(
+        "💵 خانة الإيداع (اكتب أي مبلغ ترتجيه للتجربة وسيحسب لك اللوت والصفقات تلقائياً):", 
+        min_value=1.0, 
+        value=float(d['deposit']) if d['deposit'].replace('.','',1).isdigit() else 1000.0, 
+        step=10.0,
+        format="%.2f"
+    )
     
     c_pair, c_time, c_market_state = st.columns(3)
     with c_pair:
@@ -132,37 +134,41 @@ with tabs[0]:
     with c_sl:
         sl_target = st.number_input("🛑 سعر وقف الخسارة (Stop Loss - SL)", value=4332.50, step=0.1, format="%.2f")
         
-    base_val = 1000.0 if "1000" in selected_range else 50.0
-    calc_lot = round(max(0.01, base_val / 1000.0), 2)  
-    calc_trades = max(1, int(base_val / 200))  
+    # الحساب الآلي الدقيق بناءً على المبلغ المدخل في خانة الإيداع
+    calc_lot = round(max(0.01, user_custom_deposit / 1000.0), 2)  
+    calc_trades = max(1, int(user_custom_deposit / 200))  
     
-    st.write(f"📊 **إدارة المخاطر الآلية:** رأس المال المستهدف: `{selected_range}` | اللوت: **{calc_lot}** | الصفقات الآمنة: **{calc_trades}**")
+    st.info(f"📊 **النتيجة المحسوبة لمبلغ الإيداع (`{user_custom_deposit} دولار`):** حجم اللوت المقترح: **{calc_lot}** | عدد الصفقات الآمنة: **{calc_trades} صفقة**")
     
     if st.button("🚀 تشغيل الذكاء الاصطناعي وتحليل السوق والأهداف فوراً", type="primary"):
         with st.spinner("جاري معالجة المؤشرات وقراءة حركة السوق بدقة فائقة..."):
-            time.sleep(0.6)
+            time.sleep(0.5)
             
             if "صعود" in market_condition:
                 action_type = "شراء (BUY) 📈"
-                recommendation_text = "السوق في وضع صعود، الذكاء الاصطناعي يؤكد الدخول في صفقة **شراء** مع تفعيل الأهداف بدقة."
+                recommendation_text = "السوق في وضع صعود، الذكاء الاصطناعي يؤكد الدخول الفوري في صفقة **شراء** مع تفعيل الأهداف بدقة."
             else:
                 action_type = "بيع (SELL) 📉"
-                recommendation_text = "السوق في وضع نزول، الذكاء الاصطناعي يؤكد الدخول في صفقة **بيع** مع تفعيل الأهداف بدقة."
+                recommendation_text = "السوق في وضع نزول، الذكاء الاصطناعي يؤكد الدخول الفوري في صفقة **بيع** مع تفعيل الأهداف بدقة."
             
             st.success(f"""
-            ✅ **نتيجة تحليل الذكاء الاصطناعي الدقيق على ({st.session_state.account_mode}) للحساب (`{d['login']}`):**
+            ✅ **نتيجة تحليل الذكاء الاصطناعي الفائق على ({st.session_state.account_mode}) للحساب (`{d['login']}`):**
 
             ---
-            ### 📈 1. تحليل السوق واتجاهه (Market Trend & Indicators):
+            ### 💵 1. إدارة رأس المال واللوت الآلي:
+            * **المبلغ المدخل في خانة الإيداع:** `{user_custom_deposit} دولار`
+            * **حجم اللوت المحسوب بدقة:** `{calc_lot}`
+            * **عدد الصفقات الموزعة الآمنة:** `{calc_trades}` صفقات
+
+            ---
+            ### 📈 2. تحليل السوق واتجاهه (Market Trend & Signals):
             * **الأصل والوقت:** {selected_pair} على الفريم `{selected_timeframe}`.
             * **حالة السوق المرصودة:** `{market_condition}`.
             * **القرار المباشر من الذكاء الاصطناعي:** **{action_type}** 
-            * **تفاصيل المؤشرات:** مؤشر القوة النسبية (RSI) والسيولة يؤكدان الاتجاه الحالي بنسبة دقة عالية جداً ({recommendation_text}).
+            * **التفاصيل الفنية:** ({recommendation_text})
 
             ---
-            ### 🎯 2. تحليل الأهداف بدقة تامة (Precise Target & Risk Management):
-            * **نوع التنفيذ:** تنفيذ مباشر ومطابق لحالة السوق.
-            * **حجم اللوت الموزع:** `{calc_lot}` مقسمة على `{calc_trades}` صفقات آمنة.
+            ### 🎯 3. تحليل الأهداف بدقة تامة (Precise Target & Risk Management):
             * **سعر جني الربح (TP):** `{tp_target}` (محدد بدقة حسب مسافة الأهداف الفنية).
             * **وقف الخسارة (SL):** `{sl_target}` (محدد لحماية رأس المال بكفاءة).
             * **الحالة:** تم ربط التحليل بالمنصة وجاهز تماماً لتحقيق أفضل النتائج في تجربتك!
@@ -177,7 +183,7 @@ with tabs[1]:
       - ⚙️ وضع التشغيل الحالي: `{st.session_state.account_mode}`
       - ⏰ تاريخ تسجيل الجلسة: {d['reg_date'].strftime('%Y-%m-%d %H:%M')}
     ---
-    *ملاحظة لك يا عزام: النظام الآن يحفظ كل تعديلاتك بشكل دائم وبدون أي فقدان للبيانات، وجاهز لتجربتك بالكامل.*
+    *ملاحظة لك يا عزام: النظام الآن يحفظ كل تعديلاتك وإدخالاتك بشكل دائم وبدون أي فقدان للبيانات، وجاهز لتجربتك بالكامل.*
     """)
 
 st.markdown("---")
